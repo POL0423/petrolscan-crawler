@@ -3,6 +3,19 @@
 # You can also use any other image from Docker Hub.
 FROM apify/actor-node:20 AS builder
 
+# Set and import environment variables
+ARG DB_HOSTNAME
+ARG DB_PORT=3306
+ARG DB_USERNAME
+ARG DB_PASSWORD
+ARG DB_DATABASE
+
+ENV DB_HOSTNAME=${DB_HOSTNAME}
+ENV DB_PORT=${DB_PORT}
+ENV DB_USERNAME=${DB_USERNAME}
+ENV DB_PASSWORD=${DB_PASSWORD}
+ENV DB_DATABASE=${DB_DATABASE}
+
 # Copy just package.json and package-lock.json
 # to speed up the build using Docker layer cache.
 COPY package*.json ./
@@ -44,7 +57,6 @@ RUN npm --quiet set progress=false \
 # Since we do this after NPM install, quick build will be really fast
 # for most source file changes.
 COPY . ./
-
 
 # Run the image.
 CMD npm run start:prod --silent
