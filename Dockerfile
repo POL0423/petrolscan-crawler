@@ -73,5 +73,5 @@ RUN chmod 0644 ${WORKDIR}/scripts/jobs.crontab
 RUN crontab ${WORKDIR}/scripts/jobs.crontab
 RUN touch /var/log/cron.log
 
-# Run the image. We simply say
+# Run the image. We run the cron and display logs
 CMD cron && tail -f /var/log/cron.log
