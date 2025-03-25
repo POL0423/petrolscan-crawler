@@ -16,14 +16,8 @@
 
 // Node.js core modules
 import fs from 'fs';
-import { 
-    Worker, SHARE_ENV, MessageChannel, MessagePort, parentPort
-} from 'worker_threads';
+import { Worker, SHARE_ENV, MessageChannel } from 'worker_threads';
 import moment from 'moment-timezone';
-
-// Local imports
-import Timestamp from './classes/Timestamp.js';
-import { ErrnoException } from 'crawlee';
 
 // Logic
 //-------------------------------------------------
@@ -34,7 +28,7 @@ const dir: string[] = fs.readdirSync('./crawlers/');
 // Create subthreads
 const workers: {[a: string]: Worker} = {};
 dir.forEach((f: string) => {
-    workers[f.replace(/\.[jt]s$/, '')] = new Worker(`./crawlers/${f}.js`);
+    workers[f.replace(/\.[jt]s$/, '')] = new Worker(`./crawlers/${f}.js`, { env: SHARE_ENV });
 });
 
 // Create communication channels
