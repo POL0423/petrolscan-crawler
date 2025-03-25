@@ -15,77 +15,89 @@
 //-------------------------------------------------
 
 // Node.js core modules
+import fs from 'fs';
 import { 
     Worker, SHARE_ENV, MessageChannel, MessagePort, parentPort
 } from 'worker_threads';
+import moment from 'moment-timezone';
 
 // Local imports
 import Timestamp from './classes/Timestamp.js';
+import { ErrnoException } from 'crawlee';
 
 // Logic
 //-------------------------------------------------
-// Define exit fallback
-const exit_fallback = (exitCode: number): void => {
-    // Terminate everything if the process didn't finish successfully.
-    if(exitCode !== 0) process.exit(exitCode);
-}
+
+// Read directory
+const dir: string[] = fs.readdirSync('./crawlers/');
 
 // Create subthreads
-const workers: {[a: string]: Worker} = {
-    globus: new Worker('./crawlers/globus.ts', { env: SHARE_ENV }).on('exit', exit_fallback),
-    orlen: new Worker('./crawlers/orlen.ts', { env: SHARE_ENV }).on('exit', exit_fallback),
-    shell: new Worker('./crawlers/shell.ts', { env: SHARE_ENV }).on('exit', exit_fallback),
-    euro_oil: new Worker('./crawlers/euroOil.ts', { env: SHARE_ENV }).on('exit', exit_fallback),
-    ono: new Worker('./crawlers/ono.ts', { env: SHARE_ENV }).on('exit', exit_fallback),
-    mol: new Worker('./crawlers/mol.ts', { env: SHARE_ENV }).on('exit', exit_fallback),
-    omv: new Worker('./crawlers/omv.ts', { env: SHARE_ENV }).on('exit', exit_fallback),
-    prim: new Worker('./crawlers/prim.ts', { env: SHARE_ENV }).on('exit', exit_fallback)
-};
+const workers: {[a: string]: Worker} = {};
+dir.forEach((f: string) => {
+    workers[f.replace(/\.[jt]s$/, '')] = new Worker(`./crawlers/${f}.js`);
+});
 
 // Create communication channels
-const channels: {[a: string]: MessageChannel} = {
-    globus: new MessageChannel(),
-    orlen: new MessageChannel(),
-    shell: new MessageChannel(),
-    euro_oil: new MessageChannel(),
-    ono: new MessageChannel(),
-    mol: new MessageChannel(),
-    omv: new MessageChannel(),
-    prim: new MessageChannel()
-};
+const channels: {[a: string]: MessageChannel} = {};
+dir.forEach((f: string): void => {
+    channels[f.replace(/\.[jt]s$/, '')] = new MessageChannel();
+});
 
-// Send initial messages
-workers.globus.postMessage({command: 'start'}, [channels.globus.port1]);
-workers.orlen.postMessage({command: 'start'}, [channels.orlen.port1]);
-workers.shell.postMessage({command: 'start'}, [channels.shell.port1]);
-workers.euro_oil.postMessage({command: 'start'}, [channels.euro_oil.port1]);
-workers.ono.postMessage({command: 'start'}, [channels.ono.port1]);
-workers.mol.postMessage({command: 'start'}, [channels.mol.port1]);
-workers.omv.postMessage({command: 'start'}, [channels.omv.port1]);
-workers.prim.postMessage({command: 'start'}, [channels.prim.port1]);
+// Datetime format              Year-Month-Day Hours:Minutes:Seconds Timezone
+const format_string = "YYYY-MM-DD HH:mm:ss zz";
+const timezone = moment.tz.guess();                 // Get the local timezone
 
 // Receive messages
-channels.globus.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Globus Crawler sends info: ${value}`);
+Object.keys(channels).forEach((c: string) => {
+    channels[c].port2.on('message', (msg) => {
+        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${c}"] Received data: ${msg}`);
+    });
 });
-channels.orlen.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Orlen Crawler sends info: ${value}`);
+
+// Wait for all workers to finish
+Object.keys(workers).forEach((w: string) => {
+    // Handling errors
+    workers[w].on("error", (err: Error) => {
+        console.error(`[${moment().tz(timezone).format(format_string)}] [Process "${w}"] Error: ${err}`);
+    });
+
+    // Handling exits
+    workers[w].on("exit", (retval: number) => {
+        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${w}"] Received Exit code ${retval}`);
+        
+    });
+
+    // Handling starts
+    workers[w].on("online", () => {
+        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${w}"] Process online`);
+    });
 });
-channels.shell.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Orlen Crawler sends info: ${value}`);
+
+// Check for SIGTERM or SIGKILL
+process.on("SIGTERM", () => {
+    console.log(`[${moment().tz(timezone).format(format_string)}] [Main] Received SIGTERM, ending all jobs...`);
+    process.exit(-1);
 });
-channels.euro_oil.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Orlen Crawler sends info: ${value}`);
+
+process.on("SIGKILL", () => {
+    console.log(`[${moment().tz(timezone).format(format_string)}] [Main] Received SIGKILL, terminating all jobs...`);
+    Object.keys(workers).forEach((w: string) => {
+        // Terminate all workers
+        workers[w].terminate();
+    });
+    process.exit(-2);
 });
-channels.ono.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Orlen Crawler sends info: ${value}`);
-});
-channels.mol.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Orlen Crawler sends info: ${value}`);
-});
-channels.omv.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Orlen Crawler sends info: ${value}`);
-});
-channels.prim.port2.on('message', (value) => {
-    console.log(`[${Timestamp.getFullDateTime(new Date())}] Orlen Crawler sends info: ${value}`);
+
+// Exit gracefully
+process.on("exit", (retval: number) => {
+    // Send exit message to all workers
+    Object.keys(channels).forEach((c: string) => {
+        channels[c].port1.postMessage({signal: "SIGTERM"});
+    });
+
+    // Print exit message
+    console.log(`[${moment().tz(timezone).format(format_string)}] [Main] All processes ended.`);
+    
+    // Return exit code
+    return retval;
 });

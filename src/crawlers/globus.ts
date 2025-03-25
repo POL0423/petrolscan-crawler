@@ -26,5 +26,6 @@ import logger from './common/db_logger.js'
 // Scraping logic
 //-------------------------------------------------
 const crawler: WebCrawler = new GlobusCrawler(logger);
+crawler.start();
 
-// TODO: Rest of the logic
+// TODO: Rest of the logic: Logging

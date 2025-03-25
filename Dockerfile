@@ -68,9 +68,9 @@ COPY . ./
 # Make cron job script executable
 RUN chmod +x scripts/run_cron.sh
 
-# Add a cron job to schedule crawlers every hourab
-RUN chmod 0644 ${WORKDIR}/scripts/jobs.crontab
-RUN crontab ${WORKDIR}/scripts/jobs.crontab
+# Add a cron job to schedule crawlers every day at 12:00pm
+RUN chmod 0644 scripts/jobs.crontab
+RUN crontab scripts/jobs.crontab
 RUN touch /var/log/cron.log
 
 # Run the image. We run the cron and display logs

@@ -14,10 +14,10 @@
 // Imports
 //-------------------------------------------------
 
-// Node.js installed Crawlee modules
+// Global imports
 // TODO: Import necessary Crawlee modules
 
-// Parent class and supporting classes
+// Local imports
 import DBLogger from './DBLogger.js';
 import WebCrawler from "./WebCrawler.js";
 

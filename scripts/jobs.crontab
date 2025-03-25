@@ -13,4 +13,17 @@
 # File: scripts/jobs.crontab
 ###################################################
 
-0 12 * * * /app/scripts/run_cron.sh &>> /var/log/cron.log
+# If you want to output app console logs, remove the --silent flag
+# If you want to change the console logs type, these flags are supported:
+#   --silent                Supresses almost all output
+#   --error                 Outputs only errors
+#   --warn                  Outputs warnings
+#   --notice                Outputs normal logs
+#   --http                  Outputs HTTP logs
+#   --timing                Outputs timing logs
+#   --info                  Outputs informational logs
+#   --verbose               Outputs verbose logs
+#   --silly                 Outputs everything (including debugging information)
+# Flags are sorted from highest to lowest. Lower modes also output higher modes.
+# Any other flag will be ignored. Default mode is "--notice".
+0 12 * * * /app/scripts/run_cron.sh --silent &>> /var/log/cron.log
