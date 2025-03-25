@@ -8,14 +8,20 @@
  * 
  * @see https://crawlee.dev
  * 
- * File: src/types/FuelType.ts
+ * File: src/types/DBSettings.ts
  */
 
-// Types declarations
-type Location = {
-    name: string;
-    lon: number;
-    lat: number;
+// Imports
+//-------------------------------------------------
+
+// Logic
+//-------------------------------------------------
+type DBSettings = {
+    hostname: string;
+    port: string;
+    username: string;
+    password: string;
+    database: string;
 };
 
-export default Location;
+export default DBSettings;
