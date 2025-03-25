@@ -22,11 +22,11 @@ import DBLogger from "../../classes/DBLogger.js";
 
 // Environment variables
 const logger = new DBLogger({
-    hostname: process.env.DB_HOSTNAME || "localhost",
-    port: process.env.DB_PORT || "3306",
-    username: process.env.DB_USERNAME || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_DATABASE || "default"
+    hostname:   process.env.DB_HOSTNAME     || "localhost",         // Database server hostname ....... default: "localhost"
+    port:       process.env.DB_PORT         || "3306",              // Database server port ........... default: "3306"
+    username:   process.env.DB_USERNAME     || "root",              // Database server username ....... default: "root"
+    password:   process.env.DB_PASSWORD     || "",                  // Database server user password .. default: ""
+    database:   process.env.DB_DATABASE     || "default"            // Database name .................. default: "default"
 });
 
 export default logger;

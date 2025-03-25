@@ -54,6 +54,16 @@ class DBLogger {
             fuel_name VARCHAR(255) NOT NULL,
             fuel_price FLOAT NOT NULL
         )`);
+        // Created table should have following structure:
+        // id INT AUTO_INCREMENT PRIMARY KEY, ......................... ID of the record (auto-incremented)
+        // timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, .... Timestamp in UTC (YYYY-MM-DD HH:mm:ss)
+        // station_name VARCHAR(255) NOT NULL, ........................ Name of the petrol station
+        // station_loc_name VARCHAR(255) NOT NULL, .................... Name of the petrol station location (City, Street, etc.)
+        // station_loc_lat FLOAT NOT NULL, ............................ Latitude of the petrol station (GPS coordinates)
+        // station_loc_lon FLOAT NOT NULL, ............................ Longitude of the petrol station (GPS coordinates)
+        // fuel_type VARCHAR(255), .................................... Type of the fuel (see src/types/FuelType.ts)
+        // fuel_name VARCHAR(255) NOT NULL, ........................... Name of the fuel as defined by the petrol station
+        // fuel_price FLOAT NOT NULL .................................. Price of the fuel in the petrol station
 
         // Close connection
         connection.end();

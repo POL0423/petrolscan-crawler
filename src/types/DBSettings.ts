@@ -17,11 +17,11 @@
 // Logic
 //-------------------------------------------------
 type DBSettings = {
-    hostname: string;
-    port: string;
-    username: string;
-    password: string;
-    database: string;
+    hostname: string;       // Database server hostname
+    port: string;           // Database server port
+    username: string;       // Database server username
+    password: string;       // Database server user password
+    database: string;       // Database name
 };
 
 export default DBSettings;
