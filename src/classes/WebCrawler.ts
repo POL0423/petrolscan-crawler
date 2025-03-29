@@ -20,11 +20,13 @@ abstract class WebCrawler {
     private name: string;
     private url: string;
     private logger: DBLogger;
+    private interrupt: boolean;
 
     constructor(name: string, url: string, logger: DBLogger) {
         this.name = name;
         this.url = url;
         this.logger = logger;
+        this.interrupt = false;
     }
 
     public getName(): string {
@@ -33,6 +35,14 @@ abstract class WebCrawler {
 
     public getUrl(): string {
         return this.url;
+    }
+
+    public interruptExecution(): boolean {
+        return (this.interrupt = true);
+    }
+
+    public isInterrupted(): boolean {
+        return this.interrupt;
     }
 
     public abstract start(): void;
