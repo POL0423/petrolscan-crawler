@@ -27,6 +27,9 @@ class ShellCrawler extends WebCrawler {
     }
 
     public start(): void {
+        // Check interruption flag (should be false, but you never know)
+        if (this.isInterrupted()) return;
+
         // TODO: Crawler logic
     }
 }
