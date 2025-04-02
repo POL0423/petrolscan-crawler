@@ -22,19 +22,34 @@ import moment from 'moment-timezone';
 // Logic
 //-------------------------------------------------
 
+// Disabled crawlers (Check out README.md for their exclusion reasons)
+const disabled: string[] = [
+    'shell',
+    'eurooil',
+    'mol',
+    'omv',
+    'prim'
+];
+
 // Read directory
 const dir: string[] = fs.readdirSync('./crawlers/');
 
 // Create subthreads
 const workers: {[a: string]: Worker} = {};
 dir.forEach((f: string) => {
-    workers[f.replace(/\.[jt]s$/, '')] = new Worker(`./crawlers/${f}.js`, { env: SHARE_ENV });
+    let m = f.replace(/\.[jt]s$/, '');
+
+    if(!(m in disabled))        // Exclude disabled crawlers
+        workers[m] = new Worker(`./crawlers/${m}.js`, { env: SHARE_ENV });
 });
 
 // Create communication channels
 const channels: {[a: string]: MessageChannel} = {};
 dir.forEach((f: string): void => {
-    channels[f.replace(/\.[jt]s$/, '')] = new MessageChannel();
+    let m = f.replace(/\.[jt]s$/, '');
+
+    if(!(m in disabled))        // Exclude disabled crawlers
+        channels[m] = new MessageChannel();
 });
 
 // Datetime format              Year-Month-Day Hours:Minutes:Seconds Timezone

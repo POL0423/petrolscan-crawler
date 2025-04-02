@@ -15,6 +15,7 @@
 //-------------------------------------------------
 import DBLogger from './DBLogger.js';
 import FuelType from '../types/FuelType.js';
+import FuelQuality from '../types/FuelQuality.js';
 
 abstract class WebCrawler {
     private name: string;
@@ -47,47 +48,165 @@ abstract class WebCrawler {
 
     public abstract start(): void;
 
-    public static resolveFuelType(fuelName: string): FuelType {
-        let ftlower = fuelName.toLowerCase();
+    public static resolveFuelQuality(station: string, fuelName: string): FuelQuality {
+        let pslower = station.toLowerCase();            // Petrol station name (converted to lowercase)
+        let ftlower = fuelName.toLowerCase();           // Fuel name (converted to lowercase)
+
+        // TODO: Write quality sorting for each petrol station
+        if (
+            // Regular
+            pslower === "globus" && !ftlower.includes("plus")                       // Globus
+                && (ftlower.includes("natural") || ftlower.includes("diesel"))      // (only include motion fuels)
+            ||
+            pslower === "orlen" && ftlower.includes("effecta")                      // Orlen
+            ||
+            pslower === "shell" && ftlower.includes("fuelsave")                     // Shell
+            ||
+            pslower === "ono" && ftlower.includes("n95c") && ftlower.includes("dc")     // ONO (GIF filename)
+            ||
+            pslower === "mol" && !ftlower.includes("plus")                          // MOL (*)
+            ||
+            pslower === "omv" && !ftlower.includes("maxxmotion") && (ftlower.includes("natural") || ftlower.includes("diesel"))
+                                                                                    // OMV
+            //----------------------------------------- No data
+            // EuroOil (**) + Prim (**)
+        ) return "REGULAR";
 
         if (
-            // Regular petrols
-            ftlower.includes("natural") && !ftlower.endsWith("plus")    // Globus
-            // ...
-        ) return "PETROL_REGULAR";
+            // Premium
+            pslower === "globus" && ftlower.includes("plus")                        // Globus
+                && (ftlower.includes("natural") || ftlower.includes("diesel"))      // (only include motion fuels)
+            ||
+            pslower === "orlen" && ftlower.includes("verva")                        // Orlen
+            ||
+            pslower === "shell" && ftlower.includes("v-power")                      // Shell
+                && !ftlower.includes("racing")      // Racing is its own category!
+            ||
+            pslower === "ono" && ftlower.includes("n98c")                           // ONO (GIF filename)
+            ||
+            pslower === "mol" && ftlower.includes("plus")                           // MOL (*)
+            ||
+            pslower === "omv" && (ftlower.includes("maxxmotion") && !ftlower.includes("100"))       // OMV
+
+            //----------------------------------------- No data
+            // EuroOil (**) + Prim (**)
+        ) return "PREMIUM";
 
         if (
-            // Premium petrols
-            ftlower.includes("natural") && ftlower.endsWith("plus")     // Globus
-            // ...
-        ) return "PETROL_PREMIUM";
+            // Racing
+            pslower === "shell" && ftlower.includes("racing")                       // Shell
+            ||
+            pslower === "omv" && ftlower.includes("maxxmotion 100")                 // OMV
+
+            //----------------------------------------- No data
+            // Globus + Orlen + EuroOil (**) + ONO + Prim (**)
+        ) return "RACING";
+
+        // Nothing else
+        return undefined;
+
+        // Notes
+        //---------------------------------------------------------------------------------------------------
+        // (*)      MOL has their map feature broken at the time of writing this app and Bachelor Thesis.
+        //
+        // (**)     No data for "Prim" petrol stations are provided, since their website doesn't provide
+        //          any price data. The same applies to "EuroOil" as well.
+    }
+
+    public static resolveFuelType(station: string, fuelName: string): FuelType {
+        let pslower = station.toLowerCase();            // Petrol station name (converted to lowercase)
+        let ftlower = fuelName.toLowerCase();           // Fuel name (converted to lowercase)
 
         if (
-            // Regular diesels
-            ftlower.includes("diesel") && !ftlower.endsWith("plus")     // Globus
-            // ...
-        ) return "DIESEL_REGULAR";
+            // Petrols
+            (pslower === "globus" || pslower === "omv")     // Globus + OMV
+                && (ftlower.includes("natural") || ftlower.includes("maxxmotion 95")) ||
+
+            pslower === "orlen"                             // Orlen
+                && (ftlower.includes("effecta") || ftlower.includes("verva")) && !ftlower.includes("diesel") ||
+
+            pslower === "shell"                             // Shell
+                && !ftlower.startsWith("nafta") ||
+
+            pslower === "eurooil"                           // EuroOil
+                && (ftlower.includes("ba 95") || ftlower.includes("ba 98") || ftlower.includes("ba 100")) ||
+
+            pslower === "ono"                               // ONO (GIF filename)
+                && (ftlower.includes("n95c") || ftlower.includes("n98c")) ||
+            
+            pslower === "mol"                               // MOL (*)
+                && ftlower.includes("benzin")
+
+            //----------------------------------------- No data
+            // Prim (**)
+        ) return "PETROL";
 
         if (
-            // Premium diesels
-            ftlower.includes("diesel") && ftlower.endsWith("plus")      // Globus
-            // ...
-        ) return "DIESEL_PREMIUM";
+            // Diesels
+            (pslower === "globus" || pslower === "orlen" || pslower === "eurooil" || pslower === "mol" || pslower === "omv")
+                && ftlower.includes("diesel") ||            // Globus + Orlen + EuroOil + MOL (*) + OMV
+            
+            pslower === "shell"                             // Shell
+                && ftlower.startsWith("nafta") ||
+
+            pslower === "ono"                               // ONO (GIF filename)
+                && ftlower.includes("dc")
+
+            //----------------------------------------- No data
+            // Prim (**)
+        ) return "DIESEL";
+
+        if (
+            // CNG
+            ftlower.includes("cng")                 // Orlen + EuroOil
+
+            //----------------------------------------- No data
+            // Globus + Shell + ONO + MOL + OMV + Prim (**)
+        ) return "CNG";
+
+        if (
+            // LPG
+            ftlower.includes("lpg") ||              // Orlen + EuroOil + OMV
+            ftlower.includes("lpgc")                // ONO (GIF filename)
+
+            //----------------------------------------- No data
+            // Globus + Shell + MOL + Prim (**)
+        ) return "LPG";
+
+        if (
+            // HVO
+            ftlower.includes("hvo")                 // EuroOil
+
+            //----------------------------------------- No data
+            // Globus + Orlen + Shell + ONO + MOL + OMV + Prim (**)
+        ) return "HVO";
 
         if (
             // AdBlue
-            ftlower.includes("adblue")                                  // Globus
-            // ...
+            ftlower.includes("adblue") ||           // Globus + EuroOil + MOL (*)
+            ftlower.includes("abc")                 // ONO (GIF filename)
+
+            //----------------------------------------- No data
+            // Orlen + Shell + OMV + Prim (**)
         ) return "ADBLUE";
 
         if (
             // Windscreen
-            ftlower.includes("kapalina do ostřikovačů")                 // Globus
-            // ...
+            ftlower.includes("kapalina do ostřikovačů")         // Globus
+
+            //----------------------------------------- No data
+            // Orlen + Shell + EuroOil + MOL + OMV + Prim (**)
         ) return "WINDSCREEN";
 
         // Nothing else
         return undefined;
+
+        // Notes
+        //---------------------------------------------------------------------------------------------------
+        // (*)      MOL has their map feature broken at the time of writing this app and Bachelor Thesis.
+        //
+        // (**)     No data for "Prim" petrol stations are provided, since their website doesn't provide
+        //          any price data. The same applies to "EuroOil" as well.
     }
 }
 

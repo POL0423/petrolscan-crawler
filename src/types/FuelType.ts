@@ -12,13 +12,13 @@
  */
 
 // Types declarations
-type FuelTypeEnum = "PETROL_REGULAR" |      // Regular petrol (cheaper)
-                    "PETROL_PREMIUM" |      // Premium petrol (expensive)
-                    "DIESEL_REGULAR" |      // Regular diesel (cheaper)
-                    "DIESEL_PREMIUM" |      // Premium diesel (expensive)
-                    "ADBLUE" |              // AdBlue (pee acid)
-                    "WINDSCREEN";           // Windscreen fluid (windshield cleaning fluid)
-
-type FuelType = FuelTypeEnum | undefined;
+type FuelType =         "PETROL" |              // Petrol
+                        "DIESEL" |              // Diesel
+                        "CNG" |                 // Compressed natural gas
+                        "LPG" |                 // Liquid petroleum gas
+                        "HVO" |                 // Hydrotreated vegetable oil
+                        "ADBLUE" |              // AdBlue (pee acid)
+                        "WINDSCREEN" |          // Windscreen fluid (windshield cleaning fluid)
+                        undefined;              // Unspecified type (most likely will result in an error)
 
 export default FuelType;
