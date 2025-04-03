@@ -11,4 +11,15 @@
  * File: test/test_main.ts
  */
 
-// TODO: Implement tests
+// Imports
+//-------------------------------------------------
+import fs from 'fs';
+import { Worker, SHARE_ENV, MessageChannel } from 'worker_threads';
+import moment from 'moment-timezone';
+
+// Disabled crawlers
+const disabled = ['shell', 'eurooil', 'mol', 'omv', 'prim'];
+
+// TODO: Basic connectivity and database logging test
+
+// TODO: Crawler tests

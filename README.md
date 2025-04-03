@@ -21,9 +21,8 @@ While analyzing websites of petrol stations, I decided to disable following craw
   station was discarded from this project. Data for its processing are included.
 - **EuroOil:** — This website doesn't seem to include any kind of fuel price data. Therefore this petrol
   station was discarded from this project. Data for its processing are included.
-- **MOL:** — This website's petrol station search engine doesn't work. The search engine
-  relies on map to work, which it doesn't, therefore it throws errors. Therefore this petrol station
-  was discarded from this project. Data for its processing are included.
+- **MOL:** — This website doesn't seem to include any kind of fuel price data. Therefore this petrol
+  station was discarded from this project. Data for its processing are included.
 - **OMV:** — This website decided to troll crawlers and scrapers by embedding all fuel price data
   into a single generated PNG image, which would require me to build or find an OCR, which there is
   no time for doing that. Therefore this petrol station was discarded from this project.

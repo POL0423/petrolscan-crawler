@@ -11,4 +11,11 @@
  * File: test/crawlers/common/test_db_logger.ts
  */
 
+// Imports
+//-------------------------------------------------
+
+// Global imports
+import 'dotenv/config';     // Import .env file defined environment variables
+                            // TODO: Change it for .env.test file (figure out how to do it in ES6)
+
 // TODO: Implement tests

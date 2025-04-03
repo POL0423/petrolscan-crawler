@@ -107,10 +107,10 @@ abstract class WebCrawler {
 
         // Notes
         //---------------------------------------------------------------------------------------------------
-        // (*)      MOL has their map feature broken at the time of writing this app and Bachelor Thesis.
+        // (*)      MOL's website map page apparently doesn't work with privacy browser extensions.
         //
         // (**)     No data for "Prim" petrol stations are provided, since their website doesn't provide
-        //          any price data. The same applies to "EuroOil" as well.
+        //          any price data. The same applies to "EuroOil" and "MOL" as well.
     }
 
     public static resolveFuelType(station: string, fuelName: string): FuelType {
@@ -195,18 +195,18 @@ abstract class WebCrawler {
             ftlower.includes("kapalina do ostřikovačů")         // Globus
 
             //----------------------------------------- No data
-            // Orlen + Shell + EuroOil + MOL + OMV + Prim (**)
-        ) return "WINDSCREEN";
+            // Orlen + Shell + EuroOil + ONO + MOL + OMV + Prim (**)
+        ) return "WINDSCREEN_CLEANER";
 
         // Nothing else
         return undefined;
 
         // Notes
         //---------------------------------------------------------------------------------------------------
-        // (*)      MOL has their map feature broken at the time of writing this app and Bachelor Thesis.
+        // (*)      MOL's website map page apparently doesn't work with privacy browser extensions.
         //
         // (**)     No data for "Prim" petrol stations are provided, since their website doesn't provide
-        //          any price data. The same applies to "EuroOil" as well.
+        //          any price data. The same applies to "EuroOil" and "MOL" as well.
     }
 }
 

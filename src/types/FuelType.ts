@@ -17,8 +17,8 @@ type FuelType =         "PETROL" |              // Petrol
                         "CNG" |                 // Compressed natural gas
                         "LPG" |                 // Liquid petroleum gas
                         "HVO" |                 // Hydrotreated vegetable oil
-                        "ADBLUE" |              // AdBlue (pee acid)
-                        "WINDSCREEN" |          // Windscreen fluid (windshield cleaning fluid)
+                        "ADBLUE" |              // AdBlue (synthetic pee acid)
+                        "WINDSCREEN_CLEANER" |  // Windscreen cleaning fluid
                         undefined;              // Unspecified type (most likely will result in an error)
 
 export default FuelType;

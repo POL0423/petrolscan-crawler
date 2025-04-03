@@ -11,4 +11,4 @@
  * File: test/crawlers/test_eurooil.ts
  */
 
-// TODO: Implement tests
+// Crawler disabled => no tests needed

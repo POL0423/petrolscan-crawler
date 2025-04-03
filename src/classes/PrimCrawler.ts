@@ -30,7 +30,7 @@ class PrimCrawler extends WebCrawler {
         // Check interruption flag (should be false, but you never know)
         if (this.isInterrupted()) return;
 
-        // TODO: Crawler logic
+        // Crawler logic => Crawler disabled, no logic needed
     }
 }
 

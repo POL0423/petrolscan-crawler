@@ -27,4 +27,4 @@ import logger from './common/db_logger.js'
 //-------------------------------------------------
 const crawler: WebCrawler = new MOLCrawler(logger);
 
-// TODO: Rest of the logic
+// Crawler disabled => no logic needed
