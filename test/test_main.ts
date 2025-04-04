@@ -17,8 +17,8 @@ import fs from 'fs';
 import { Worker, SHARE_ENV, MessageChannel } from 'worker_threads';
 import moment from 'moment-timezone';
 
-// Disabled crawlers
-const disabled = ['shell', 'eurooil', 'mol', 'omv', 'prim'];
+// Disabled crawlers (Check out README.md for their exclusion reasons)
+const disabled = ['orlen', 'shell', 'eurooil', 'mol', 'omv', 'prim'];
 
 // TODO: Basic connectivity and database logging test
 

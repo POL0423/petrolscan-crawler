@@ -13,21 +13,33 @@ per say to use scraped data for a simple comparison, especially if there's no pr
 
 Stay tuned for future updates.
 
+## Enabled crawlers
+
+The following petrol stations are currently enabled:
+
+- **Globus:** [https://www.globus.cz/](https://www.globus.cz/) —
+  Each hypermarket has one petrol station. There are only 16 hypermarkets in the Czech Republic.
+- **ONO:** [https://www.tank-ono.cz/](https://www.tank-ono.cz/) —
+  This network of petrol stations has 45 petrol stations all over the Czech Republic.
+
 ## Disabled crawlers
 
 While analyzing websites of petrol stations, I decided to disable following crawlers:
 
-- **Shell:** — This website doesn't seem to include any kind of fuel price data. Therefore this petrol
+- **Orlen:** This website doesn't seem to include any kind of fuel price data. Only information about
+  provided services and discounts for using a fuel card is included. Therefore this petrol station
+  was discarded from this project. Data for its processing are included.
+- **Shell:** This website doesn't seem to include any kind of fuel price data. Therefore this petrol
   station was discarded from this project. Data for its processing are included.
-- **EuroOil:** — This website doesn't seem to include any kind of fuel price data. Therefore this petrol
+- **EuroOil:** This website doesn't seem to include any kind of fuel price data. Therefore this petrol
   station was discarded from this project. Data for its processing are included.
-- **MOL:** — This website doesn't seem to include any kind of fuel price data. Therefore this petrol
+- **MOL:** This website doesn't seem to include any kind of fuel price data. Therefore this petrol
   station was discarded from this project. Data for its processing are included.
-- **OMV:** — This website decided to troll crawlers and scrapers by embedding all fuel price data
+- **OMV:** This website decided to troll crawlers and scrapers by embedding all fuel price data
   into a single generated PNG image, which would require me to build or find an OCR, which there is
   no time for doing that. Therefore this petrol station was discarded from this project.
   Data for its processing are included.
-- **Prim:** — This website doesn't seem to include any kind of fuel price data. Therefore this petrol
+- **Prim:** This website doesn't seem to include any kind of fuel price data. Therefore this petrol
   station was discarded from this project. Data for its processing are not included, since there's
   nothing to process. Yes, the petrol stations listed do include information about provided services,
   including fuel pumps (not every station includes every type and quality of fuel), but not their

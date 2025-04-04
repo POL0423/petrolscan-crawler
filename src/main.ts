@@ -23,13 +23,7 @@ import moment from 'moment-timezone';
 //-------------------------------------------------
 
 // Disabled crawlers (Check out README.md for their exclusion reasons)
-const disabled: string[] = [
-    'shell',
-    'eurooil',
-    'mol',
-    'omv',
-    'prim'
-];
+const disabled = ['orlen', 'shell', 'eurooil', 'mol', 'omv', 'prim'];
 
 // Read directory
 const dir: string[] = fs.readdirSync('./crawlers/');
