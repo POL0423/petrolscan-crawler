@@ -46,7 +46,7 @@ abstract class WebCrawler {
         return this.interrupt;
     }
 
-    public abstract start(): void;
+    public abstract start(): Promise<void>;
 
     public static resolveFuelQuality(station: string, fuelName: string): FuelQuality {
         let pslower = station.toLowerCase();            // Petrol station name (converted to lowercase)

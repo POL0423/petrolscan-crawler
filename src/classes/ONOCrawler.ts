@@ -15,7 +15,8 @@
 //-------------------------------------------------
 
 // Global imports
-// TODO: Import necessary Crawlee modules
+import { PlaywrightCrawler, Dataset } from 'crawlee';
+import moment from 'moment-timezone';
 
 // Local imports
 import DBLogger from './DBLogger.js';
@@ -26,11 +27,38 @@ class ONOCrawler extends WebCrawler {
         super("ONO", "https://www.example.com/", logger);
     }
 
-    public start(): void {
+    public async start(): Promise<void> {
         // Check interruption flag (should be false, but you never know)
         if (this.isInterrupted()) return;
 
-        // TODO: Crawler logic
+        // Pass this object
+        const thisObj = this;
+
+        // Create a new crawler
+        const crawler = new PlaywrightCrawler({
+            requestHandler: async ({ page, request }) => {
+                // Check if interrupted
+                if (thisObj.isInterrupted()) return;
+                
+                // Log start
+                console.log(`Start ${this.getName()}`);
+                
+                // Crawling logic
+                //-------------------------------------------------------------
+                
+                // Save the page details
+                Dataset.pushData({
+                    title: page.title(),
+                    url: request.loadedUrl,
+                    timestamp: moment().tz("UTC").toDate()
+                });
+                
+                // TODO: Crawling logic
+            }
+        });
+
+        // Run the crawler
+        await crawler.run([this.getUrl()]);
     }
 }
 
