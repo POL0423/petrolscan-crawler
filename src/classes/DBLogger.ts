@@ -51,6 +51,7 @@ class DBLogger {
             station_loc_lat FLOAT NOT NULL,
             station_loc_lon FLOAT NOT NULL,
             fuel_type VARCHAR(255),
+            fuel_quality VARCHAR(255),
             fuel_name VARCHAR(255) NOT NULL,
             fuel_price FLOAT NOT NULL
         )`);
@@ -92,14 +93,16 @@ class DBLogger {
             WHERE station_name="${data.StationName}"
             AND fuel_name="${data.FuelName}"
             AND station_loc_lat="${data.StationLocation.lat}"
-            AND station_loc_lon="${data.StationLocation.lon}" AND fuel_type="${data.FuelType}"`);
+            AND station_loc_lon="${data.StationLocation.lon}"
+            AND fuel_type="${data.FuelType}" AND fuel_quality="${data.FuelQuality}"`);
 
         // TODO: Check if data already exists in DB
         // connection.query(`SELECT * FROM petrolscan_data
             // WHERE station_name="${data.StationName}"
             // AND fuel_name="${data.FuelName}"
             // AND station_loc_lat="${data.StationLocation.lat}"
-            // AND station_loc_lon="${data.StationLocation.lon}" AND fuel_type="${data.FuelType}"`);
+            // AND station_loc_lon="${data.StationLocation.lon}"
+            // AND fuel_type="${data.FuelType}" AND fuel_quality="${data.FuelQuality}"`);
 
         // Return check flag
         return updated;

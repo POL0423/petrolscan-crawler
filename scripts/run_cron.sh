@@ -57,7 +57,11 @@ esac
 echo -e "$(date +"[%F %T %Z]") [Service] Crawlers started."
 
 # Run crawlers;     ${MODE}: Sets the output mode for crawlers
-npm run start:prod $MODE
+echo -e "$(date +"[%F %T %Z]") [Service] Running Globus crawler."
+npm run start:prod -- Globus $($MODE)
+
+echo -e "$(date +"[%F %T %Z]") [Service] Running ONO crawler."
+npm run start:prod -- ONO $($MODE)
 
 # Resolve termination or successful finish
 if [ $? -eq 0 ]

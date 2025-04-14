@@ -21,23 +21,23 @@ import moment from 'moment-timezone';
 import GlobusCrawler from './classes/GlobusCrawler.js';
 import ONOCrawler from './classes/ONOCrawler.js';
 import logger from './crawlers/common/db_logger.js';
+import WebCrawler from './classes/WebCrawler.js';
 
 // Scraping logic
 //-------------------------------------------------
 const timezone = moment.tz.guess();     // Get local timezone
 
-// Log start
-console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Starting...`);
+// Get process argument
+const arg = (process.argv.length > 2) ? process.argv[2] : null;
+const allowed = ['Globus', 'ONO'];
 
-// Create crawlers
-const crawlers = {
-    globus: new GlobusCrawler(logger),
-    ono: new ONOCrawler(logger)
-};
+if (!arg || !allowed.includes(arg)) {
+    console.error(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Invalid argument provided!`);
+    process.exit(1);
+}
 
-// Start crawlers
-crawlers.globus.start();
-crawlers.ono.start();
+// Create crawler
+const crawler: WebCrawler = (arg === "Globus") ? new GlobusCrawler(logger) : new ONOCrawler(logger);
 
-// Log end
-console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Finished.`);
+// Start crawler
+crawler.start();

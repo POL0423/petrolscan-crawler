@@ -15,6 +15,7 @@
 //-------------------------------------------------
 
 // Local imports
+import FuelQuality from './FuelQuality.js';
 import FuelType from './FuelType.js';
 import Location from './Location.js';
 
@@ -24,6 +25,7 @@ type DBData = {
     StationName: string;
     StationLocation: Location;
     FuelType: FuelType;
+    FuelQuality: FuelQuality;
     FuelName: string;
     FuelPrice: number;
 };

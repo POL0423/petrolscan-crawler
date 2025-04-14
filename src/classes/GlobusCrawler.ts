@@ -36,17 +36,17 @@ class GlobusCrawler extends WebCrawler {
         // Create a new crawler
         const crawler = new PlaywrightCrawler({
             requestHandler: async ({ page }) => {
+
                 // Get local timezone
                 const timezone = moment.tz.guess();
                 const format = "YYYY-MM-DD HH:mm:ss zz";
 
                 // Log start
-                console.log(`[${moment().tz(timezone).format(format)}] [Process] Start ${this.getName()}`);
+                console.log(`[${moment().tz(timezone).format(format)}] [Process] Start ${this.getName()} crawler...`);
 
                 // Crawling logic
                 try {
-                    console.log(`[${moment().tz(timezone)
-                        .format(format)}] [Process] ${this.getName()} crawler is starting the extraction process...`);
+                    console.log(`${this.getName()} crawler is starting the extraction process...`);
                     
                     // Step 2: Handle cookie consent if present
                     await page.waitForSelector('button#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
@@ -63,40 +63,44 @@ class GlobusCrawler extends WebCrawler {
                     await page.waitForTimeout(1000); // Wait for the location selection to appear
                     
                     // Step 4: Get all locations
-                    console.log(`[${moment().tz(timezone)
-                        .format(format)}] [Process] ${this.getName()} crawler is collecting all available locations...'`);
+                    console.log(`${this.getName()} crawler is collecting all available locations...'`);
                     await page.waitForSelector('#input_9 > ul > li');
                     
                     const locations = await page.locator('#input_9 > ul > li').evaluateAll((elements: any[]) => {
                         return elements.map(el => {
                             const input = el.querySelector('input');
                             const label = el.querySelector('label');
+                            const label_main = el.querySelector('span.text-base');
+                            const label_sub = el.querySelector('span.text-xs');
+                            let label_str = label ? (
+                                label_main ? label_main.textContent.trim() : ''
+                                + label_sub ? ` (${label_sub.textContent.trim()})` : ''
+                            ) : '';
+
                             return {
-                                value: input ? input.getAttribute('data-option-value') : null,
-                                name: label ? label.textContent.trim() : 'Unknown location'
+                                value: input ? el.getAttribute('data-option-value') : null,
+                                name: label ? label_str : 'Unknown location',
+                                debug: {
+                                    el_label_main: label_main.textContent.trim() || null,
+                                    el_label_sub: label_sub.textContent.trim() || null
+                                }
                             };
                         }).filter(loc => loc.value); // Filter out any null values
                     });
                     
-                    console.log(`[${moment().tz(timezone)
-                        .format(format)}] [Process] Found ${locations.length} locations.`);
+                    console.log(`Found ${locations.length} locations.`);
 
-                    console.debug('DEBUG', locations);
+                    console.log('DEBUG', locations);
                     
                     // Collected data structure
                     const fuelData = [];
                     
                     // Step 5-9: Iterate through each location
                     for (const location of locations) {
-                        console.log(`[${moment().tz(timezone)
-                            .format(format)}] [Process] Processing location: ${location.name}`);
-                        
-                        // Click on the location selection button again
-                        await page.click('div#__nuxt header#header button.btn-lg');
-                        await page.waitForTimeout(1000);
+                        console.log(`Processing location: ${location.name}`);
                         
                         // Find and click the specific location
-                        const selector = `#input_9 > ul > li input[data-option-value="${location.value}"]`;
+                        const selector = `#input_9 > ul > li[data-option-value="${location.value}"] input`;
                         await page.waitForSelector(selector);
                         await page.click(selector);
                         
@@ -109,13 +113,15 @@ class GlobusCrawler extends WebCrawler {
                         ).evaluate((el: HTMLElement | SVGElement) => { return el.textContent?.trim() || ''; });
                         
                         // Extract fuel names and prices
-                        const fuels = await page.$$eval(
-                            'body > div#teleport-target > div.items-end > div.items-end > div.flex-col > div.overscroll-contain > div.max-h-full > div.lg\\:pl-6 > section.space-y-2 > table.w-full > tbody > tr',
-                            (rows: any[]) => rows.map(row => {
+                        const fuels = await page.locator(
+                            'body > div#teleport-target > div.items-end > div.items-end > div.flex-col > div.overscroll-contain > div.max-h-full > div.lg\\:pl-6 > section.space-y-2 > table.w-full > tbody > tr')
+                            .evaluateAll((rows: any[]) => rows.map(row => {
                                 const nameEl = row.querySelector('th.text-left');
                                 const priceEl = row.querySelector('td.text-right');
-                                const type = WebCrawler.resolveFuelType('globus', nameEl ? nameEl.textContent.trim() : 'Unknown');
-                                const quality = WebCrawler.resolveFuelQuality('globus', nameEl ? nameEl.textContent.trim() : 'Unknown');
+                                const type = WebCrawler.resolveFuelType('globus',
+                                    nameEl ? nameEl.textContent.trim() : 'Unknown');
+                                const quality = WebCrawler.resolveFuelQuality('globus',
+                                    nameEl ? nameEl.textContent.trim() : 'Unknown');
                                 
                                 return {
                                     name: nameEl ? nameEl.textContent.trim() : 'Unknown',
@@ -160,8 +166,7 @@ class GlobusCrawler extends WebCrawler {
                             await changeButton.click();
                             await page.waitForTimeout(1000);
                         } else {
-                            console.warn(`[${moment().tz(timezone).format(format)}] [Process] ${thisObj
-                                .getName()} crawler could not find "Změnit" button, trying alternative approach...`);
+                            console.warn(`${thisObj.getName()} crawler couldn't find "Změnit" button, trying alternative approach...`);
                             // Alternative: go back to main page and start over
                             await page.goto(thisObj.getUrl(), { waitUntil: 'networkidle' });
                             await page.waitForTimeout(1000);
@@ -175,11 +180,9 @@ class GlobusCrawler extends WebCrawler {
                         }
                     }
                     
-                    console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] ${thisObj
-                        .getName()} crawler finished successfully.`);
-                    console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Collected data from ${
-                        fuelData.length} locations with a total of ${fuelData.reduce((sum, loc) => sum + loc.fuels.length,
-                            0)} fuel prices`);
+                    console.log(`${thisObj.getName()} crawler finished successfully.`);
+                    console.log(`Collected data from ${fuelData.length} locations with a total of ${fuelData
+                        .reduce((sum, loc) => sum + loc.fuels.length, 0)} fuel prices`);
                     
                     // Save the collected data to dataset
                     await Dataset.pushData({
@@ -187,12 +190,19 @@ class GlobusCrawler extends WebCrawler {
                         timestamp: moment().tz("UTC").toDate(),
                         data: fuelData
                     });
-                    
+
+                    // TODO: Log collected data to database
+
+                    // Log end
+                    console.log(`[${moment().tz(timezone)
+                        .format("YYYY-MM-DD HH:mm:ss zz")}] [Process] ${thisObj.getName()} crawler finished.`);
                 } catch (error) {
                     console.error(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")
-                        }] [Process] \x1b[31;1mError in ${this.getName()} crawler: ${error}\x1b[0m`);
+                        }] [Process] \x1b[31;1mError in ${thisObj.getName()} crawler: ${error}\x1b[0m`);
                 }
-            }
+            },
+
+
         });
 
         // Run the crawler
