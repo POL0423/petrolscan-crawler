@@ -17,6 +17,7 @@
 // Global imports
 import { PlaywrightCrawler, Dataset } from 'crawlee';
 import moment from 'moment-timezone';
+import { parentPort } from 'worker_threads';
 
 // Local imports
 import DBLogger from './DBLogger.js';
@@ -33,27 +34,28 @@ class ONOCrawler extends WebCrawler {
 
         // Pass this object
         const thisObj = this;
-
+        
         // Create a new crawler
         const crawler = new PlaywrightCrawler({
-            requestHandler: async ({ page, request }) => {
+            requestHandler: async ({ page }) => {
                 // Check if interrupted
                 if (thisObj.isInterrupted()) return;
                 
                 // Log start
-                console.log(`Start ${this.getName()}`);
+                parentPort?.postMessage(`Start ${this.getName()}`);
                 
                 // Crawling logic
                 //-------------------------------------------------------------
                 
+                // TODO: Crawling logic
+                parentPort?.postMessage(`DEBUG: Page name ${page.title()}`);
+                
                 // Save the page details
                 Dataset.pushData({
-                    title: page.title(),
-                    url: request.loadedUrl,
-                    timestamp: moment().tz("UTC").toDate()
+                    crawler: thisObj.getName(),
+                    timestamp: moment().tz("UTC").toDate(),
+                    data: null
                 });
-                
-                // TODO: Crawling logic
             }
         });
 

@@ -17,6 +17,7 @@
 // Global imports
 import { PlaywrightCrawler, Dataset } from 'crawlee';
 import moment from 'moment-timezone';
+import { parentPort } from 'worker_threads';
 
 // Local imports
 import DBLogger from './DBLogger.js';
@@ -41,28 +42,28 @@ class GlobusCrawler extends WebCrawler {
                 if (thisObj.isInterrupted()) return;
 
                 // Log start
-                console.log(`Start ${this.getName()}`);
+                parentPort?.postMessage(`Start ${this.getName()}`);
 
                 // Crawling logic
                 try {
-                    console.log(`${this.getName()} crawler is starting the extraction process...`);
+                    parentPort?.postMessage(`${this.getName()} crawler is starting the extraction process...`);
                     
                     // Step 2: Handle cookie consent if present
                     const cookieConsentBtn = await page.$('button#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
                     if (cookieConsentBtn) {
-                        console.log('Accepting cookies...');
+                        parentPort?.postMessage('Accepting cookies...');
                         await cookieConsentBtn.click();
                         await page.waitForTimeout(1000); // Wait for consent to be processed
                     }
                     
                     // Step 3: Click on "Vybrat pobočku" button
-                    console.log('Clicking on "Vybrat pobočku" button...');
+                    parentPort?.postMessage('Clicking on "Vybrat pobočku" button...');
                     await page.waitForSelector('div#__nuxt header#header button.btn-lg');
                     await page.click('div#__nuxt header#header button.btn-lg');
                     await page.waitForTimeout(1000); // Wait for the location selection to appear
                     
                     // Step 4: Get all locations
-                    console.log('Collecting all available locations...');
+                    parentPort?.postMessage('Collecting all available locations...');
                     await page.waitForSelector('#input_9 > ul > li');
                     
                     const locations = await page.$$eval('#input_9 > ul > li', (elements: any[]) => {
@@ -76,14 +77,14 @@ class GlobusCrawler extends WebCrawler {
                         }).filter(loc => loc.value); // Filter out any null values
                     });
                     
-                    console.log(`Found ${locations.length} locations`);
+                    parentPort?.postMessage(`Found ${locations.length} locations`);
                     
                     // Collected data structure
                     const fuelData = [];
                     
                     // Step 5-9: Iterate through each location
                     for (const location of locations) {
-                        console.log(`Processing location: ${location.name}`);
+                        parentPort?.postMessage(`Processing location: ${location.name}`);
                         
                         // Click on the location selection button again
                         await page.click('div#__nuxt header#header button.btn-lg');
@@ -128,16 +129,16 @@ class GlobusCrawler extends WebCrawler {
                         fuelData.push(locationData);
                         
                         // Log data for debugging
-                        console.log(`Station: ${locationData.stationName}`);
-                        console.log(`Location: ${locationData.location}`);
-                        console.log('Fuels:');
+                        parentPort?.postMessage(`Station: ${locationData.stationName}`);
+                        parentPort?.postMessage(`Location: ${locationData.location}`);
+                        parentPort?.postMessage('Fuels:');
                         fuels.forEach((fuel: { name: string; price: any; }) => {
-                            console.log(`  - ${fuel.name}: ${fuel.price} Kč`);
+                            parentPort?.postMessage(`  - ${fuel.name}: ${fuel.price} Kč`);
                             
                             // Determine fuel type and quality using WebCrawler static methods
                             const fuelType = WebCrawler.resolveFuelType('Globus', fuel.name);
                             const fuelQuality = WebCrawler.resolveFuelQuality('Globus', fuel.name);
-                            console.log(`    Type: ${fuelType || 'Unknown'}, Quality: ${fuelQuality || 'N/A'}`);
+                            parentPort?.postMessage(`    Type: ${fuelType || 'Unknown'}, Quality: ${fuelQuality || 'N/A'}`);
                         });
                         
                         // Click the "Změnit" button to go back to location selection
@@ -146,7 +147,7 @@ class GlobusCrawler extends WebCrawler {
                             await changeButton.click();
                             await page.waitForTimeout(1000);
                         } else {
-                            console.log('Could not find "Změnit" button, trying alternative approach...');
+                            parentPort?.postMessage('Could not find "Změnit" button, trying alternative approach...');
                             // Alternative: go back to main page and start over
                             await page.goto(thisObj.getUrl(), { waitUntil: 'networkidle' });
                             await page.waitForTimeout(1000);
@@ -160,8 +161,8 @@ class GlobusCrawler extends WebCrawler {
                         }
                     }
                     
-                    console.log('Globus crawler finished successfully');
-                    console.log(`Collected data from ${fuelData.length} locations with a total of ${fuelData.reduce((sum, loc) => sum + loc.fuels.length, 0)} fuel prices`);
+                    parentPort?.postMessage('Globus crawler finished successfully');
+                    parentPort?.postMessage(`Collected data from ${fuelData.length} locations with a total of ${fuelData.reduce((sum, loc) => sum + loc.fuels.length, 0)} fuel prices`);
                     
                     // Save the collected data to dataset
                     await Dataset.pushData({
@@ -171,7 +172,7 @@ class GlobusCrawler extends WebCrawler {
                     });
                     
                 } catch (error) {
-                    console.error(`Error in ${this.getName()} crawler:`, error);
+                    parentPort?.postMessage(`Error in ${this.getName()} crawler: ${error}`);
                 }
             }
         });

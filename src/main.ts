@@ -26,15 +26,17 @@ import moment from 'moment-timezone';
 const disabled = ['orlen', 'shell', 'eurooil', 'mol', 'omv', 'prim'];
 
 // Read directory
-const dir: string[] = fs.readdirSync('./crawlers/');
+const dir: string[] = fs.readdirSync('./src/crawlers/');
 
 // Create subthreads
 const workers: {[a: string]: Worker} = {};
 dir.forEach((f: string) => {
+    if(!f.endsWith('.js') && !f.endsWith('.ts')) return;        // Skip directories
+
     let m = f.replace(/\.[jt]s$/, '');
 
     if(!(m in disabled))        // Exclude disabled crawlers
-        workers[m] = new Worker(`./crawlers/${m}.js`, { env: SHARE_ENV });
+        workers[m] = new Worker(`./dist/crawlers/${m}.js`, { env: SHARE_ENV });
 });
 
 // Create communication channels
@@ -53,7 +55,7 @@ const timezone = moment.tz.guess();                 // Get the local timezone
 // Receive messages
 Object.keys(channels).forEach((c: string) => {
     channels[c].port2.on('message', (msg) => {
-        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${c}"] Received data: ${msg}`);
+        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${c}"] ${msg}`);
     });
 });
 
@@ -102,5 +104,5 @@ process.on("exit", (retval: number) => {
     console.log(`[${moment().tz(timezone).format(format_string)}] [Main] All processes ended.`);
     
     // Return exit code
-    return retval;
+    process.exit(retval);
 });

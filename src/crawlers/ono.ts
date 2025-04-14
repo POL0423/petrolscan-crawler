@@ -14,17 +14,22 @@
 // Imports
 //-------------------------------------------------
 
-// Node.js core modules
-
 // Import submodule for the crawler
 import WebCrawler from '../classes/WebCrawler.js';
 import ONOCrawler from '../classes/ONOCrawler.js';
+import { parentPort } from 'worker_threads';
 
 // Import database settings
-import logger from './common/db_logger.js'
+import logger from './common/db_logger.js';
 
 // Scraping logic
 //-------------------------------------------------
 const crawler: WebCrawler = new ONOCrawler(logger);
 
-// TODO: Rest of the logic
+// Interruption
+parentPort?.on('message', (message) => {
+    if (message.signal === "SIGTERM") {
+        parentPort?.postMessage(`Crawler ${crawler.getName()} interrupted.`);
+        crawler.interruptExecution();
+    }
+});

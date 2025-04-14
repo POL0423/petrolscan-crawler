@@ -17,6 +17,7 @@
 // Global imports
 const mysql = require('mysql');
 import moment from 'moment-timezone';
+import { parentPort } from 'worker_threads';
 
 // Local imports
 import DBData from '../types/DBData.js';
@@ -83,6 +84,17 @@ class DBLogger {
         });
         connection.connect();
 
+        parentPort?.postMessage(`[${moment().tz("UTC")
+            .format("YYYY-MM-DD HH:mm:ss")}][Database Logger] Checking for updates...`);
+        
+        // Debug
+        parentPort?.postMessage(`[${moment().tz("UTC")
+            .format("YYYY-MM-DD HH:mm:ss")}][Database Logger] Query: SELECT * FROM petrolscan_data
+            WHERE station_name="${data.StationName}"
+            AND fuel_name="${data.FuelName}"
+            AND station_loc_lat="${data.StationLocation.lat}"
+            AND station_loc_lon="${data.StationLocation.lon}" AND fuel_type="${data.FuelType}"`);
+
         // TODO: Check if data already exists in DB
         // connection.query(`SELECT * FROM petrolscan_data
             // WHERE station_name="${data.StationName}"
@@ -99,15 +111,15 @@ class DBLogger {
         const format_string = "YYYY-MM-DD HH:mm:ss zz";     // Datetime format      Year-Month-Day Hours:Minutes:Seconds Timezone
 
         // Log new data to console
-        console.log(`[${moment().tz(timezone)
+        parentPort?.postMessage(`[${moment().tz(timezone)
             .format(format_string)}] [Database Logger] New data from crawler "${crawler.getName()}":`);
-        console.log(`    Station Name .......... ${data.StationName}`);
-        console.log(`    Station GPS Location .. ${data.StationLocation.lat} ${data.StationLocation.lon}`);
-        console.log(`    Fuel Type ............. ${data.FuelType || "NOT_SPECIFIED"}`);
-        console.log(`    Fuel Name ............. ${data.FuelName}`);
-        console.log(`    Fuel Price ............ ${data.FuelPrice}`);
+        parentPort?.postMessage(`    Station Name .......... ${data.StationName}`);
+        parentPort?.postMessage(`    Station GPS Location .. ${data.StationLocation.lat} ${data.StationLocation.lon}`);
+        parentPort?.postMessage(`    Fuel Type ............. ${data.FuelType || "NOT_SPECIFIED"}`);
+        parentPort?.postMessage(`    Fuel Name ............. ${data.FuelName}`);
+        parentPort?.postMessage(`    Fuel Price ............ ${data.FuelPrice}`);
 
-        console.log(`\n[${moment().tz(timezone)
+        parentPort?.postMessage(`\n[${moment().tz(timezone)
             .format(format_string)}] [Database Logger] Copying data into database...`);
 
         // TODO: Database logging logic

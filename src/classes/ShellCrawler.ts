@@ -26,7 +26,7 @@ class ShellCrawler extends WebCrawler {
         super("Shell", "https://www.example.com/", logger);
     }
 
-    public start(): void {
+    public async start(): Promise<void> {
         // Check interruption flag (should be false, but you never know)
         if (this.isInterrupted()) return;
 
