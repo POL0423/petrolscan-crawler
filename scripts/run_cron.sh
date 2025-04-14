@@ -54,7 +54,7 @@ case $1 in
 esac
 
 # Print start job
-echo -e "$(date +"[%F %T %Z]") [Service] \x1b[37mCrawlers started.\x1b[0m"
+echo -e "$(date +"[%F %T %Z]") [Service] Crawlers started."
 
 # Run crawlers;     ${MODE}: Sets the output mode for crawlers
 npm run start:prod $MODE

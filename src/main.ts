@@ -14,95 +14,30 @@
 // Imports
 //-------------------------------------------------
 
-// Node.js core modules
-import fs from 'fs';
-import { Worker, SHARE_ENV, MessageChannel } from 'worker_threads';
+// Global imports
 import moment from 'moment-timezone';
 
-// Logic
+// Local imports
+import GlobusCrawler from './classes/GlobusCrawler.js';
+import ONOCrawler from './classes/ONOCrawler.js';
+import logger from './crawlers/common/db_logger.js';
+
+// Scraping logic
 //-------------------------------------------------
+const timezone = moment.tz.guess();     // Get local timezone
 
-// Disabled crawlers (Check out README.md for their exclusion reasons)
-const disabled = ['orlen', 'shell', 'eurooil', 'mol', 'omv', 'prim'];
+// Log start
+console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Starting...`);
 
-// Read directory
-const dir: string[] = fs.readdirSync('./src/crawlers/');
+// Create crawlers
+const crawlers = {
+    globus: new GlobusCrawler(logger),
+    ono: new ONOCrawler(logger)
+};
 
-// Create subthreads
-const workers: {[a: string]: Worker} = {};
-dir.forEach((f: string) => {
-    if(!f.endsWith('.js') && !f.endsWith('.ts')) return;        // Skip directories
+// Start crawlers
+crawlers.globus.start();
+crawlers.ono.start();
 
-    let m = f.replace(/\.[jt]s$/, '');
-
-    if(!(m in disabled))        // Exclude disabled crawlers
-        workers[m] = new Worker(`./dist/crawlers/${m}.js`, { env: SHARE_ENV });
-});
-
-// Create communication channels
-const channels: {[a: string]: MessageChannel} = {};
-dir.forEach((f: string): void => {
-    let m = f.replace(/\.[jt]s$/, '');
-
-    if(!(m in disabled))        // Exclude disabled crawlers
-        channels[m] = new MessageChannel();
-});
-
-// Datetime format              Year-Month-Day Hours:Minutes:Seconds Timezone
-const format_string = "YYYY-MM-DD HH:mm:ss zz";
-const timezone = moment.tz.guess();                 // Get the local timezone
-
-// Receive messages
-Object.keys(channels).forEach((c: string) => {
-    channels[c].port2.on('message', (msg) => {
-        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${c}"] ${msg}`);
-    });
-});
-
-// Wait for all workers to finish
-Object.keys(workers).forEach((w: string) => {
-    // Handling errors
-    workers[w].on("error", (err: Error) => {
-        console.error(`[${moment().tz(timezone).format(format_string)}] [Process "${w}"] Error: ${err}`);
-    });
-
-    // Handling exits
-    workers[w].on("exit", (retval: number) => {
-        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${w}"] Received Exit code ${retval}`);
-        
-    });
-
-    // Handling starts
-    workers[w].on("online", () => {
-        console.log(`[${moment().tz(timezone).format(format_string)}] [Process "${w}"] Process online`);
-    });
-});
-
-// Check for SIGTERM or SIGKILL
-process.on("SIGTERM", () => {
-    console.log(`[${moment().tz(timezone).format(format_string)}] [Main] Received SIGTERM, ending all jobs...`);
-    process.exit(-1);
-});
-
-process.on("SIGKILL", () => {
-    console.log(`[${moment().tz(timezone).format(format_string)}] [Main] Received SIGKILL, terminating all jobs...`);
-    Object.keys(workers).forEach((w: string) => {
-        // Terminate all workers
-        workers[w].terminate();
-    });
-    process.exit(-2);
-});
-
-// Exit gracefully
-process.on("exit", (retval: number) => {
-    // Send exit message to all workers
-    Object.keys(channels).forEach((c: string) => {
-        channels[c].port1.postMessage({signal: "SIGTERM"});
-    });
-
-    // Print exit message
-    console.log(`[${moment().tz(timezone).format(format_string)}] [Main] All processes ended.`);
-    
-    // Return exit code
-    process.exit(retval);
-});
+// Log end
+console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Finished.`);

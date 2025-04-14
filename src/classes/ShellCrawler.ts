@@ -27,9 +27,6 @@ class ShellCrawler extends WebCrawler {
     }
 
     public async start(): Promise<void> {
-        // Check interruption flag (should be false, but you never know)
-        if (this.isInterrupted()) return;
-
         // Crawler logic => Crawler disabled, no logic needed
     }
 }

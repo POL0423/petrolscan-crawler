@@ -15,9 +15,8 @@
 //-------------------------------------------------
 
 // Global imports
-const mysql = require('mysql');
 import moment from 'moment-timezone';
-import { parentPort } from 'worker_threads';
+import mysql from 'mysql2';
 
 // Local imports
 import DBData from '../types/DBData.js';
@@ -38,7 +37,7 @@ class DBLogger {
         // Initialize database and check table existance
         const connection = mysql.createConnection({
             host: this.settings.hostname,
-            port: this.settings.port,
+            port: Number.parseInt(this.settings.port),
             user: this.settings.username,
             password: this.settings.password
         });
@@ -77,19 +76,19 @@ class DBLogger {
         // Create connection
         let connection = mysql.createConnection({
             host: this.settings.hostname,
-            port: this.settings.port,
+            port: Number.parseInt(this.settings.port),
             user: this.settings.username,
             password: this.settings.password,
             database: this.settings.database
         });
         connection.connect();
 
-        parentPort?.postMessage(`[${moment().tz("UTC")
-            .format("YYYY-MM-DD HH:mm:ss")}][Database Logger] Checking for updates...`);
+        console.log(`[${moment().tz("UTC")
+            .format("YYYY-MM-DD HH:mm:ss")}] [Database Logger] Checking for updates...`);
         
         // Debug
-        parentPort?.postMessage(`[${moment().tz("UTC")
-            .format("YYYY-MM-DD HH:mm:ss")}][Database Logger] Query: SELECT * FROM petrolscan_data
+        console.log(`[${moment().tz("UTC")
+            .format("YYYY-MM-DD HH:mm:ss")}] [Database Logger] Query: SELECT * FROM petrolscan_data
             WHERE station_name="${data.StationName}"
             AND fuel_name="${data.FuelName}"
             AND station_loc_lat="${data.StationLocation.lat}"
@@ -111,15 +110,15 @@ class DBLogger {
         const format_string = "YYYY-MM-DD HH:mm:ss zz";     // Datetime format      Year-Month-Day Hours:Minutes:Seconds Timezone
 
         // Log new data to console
-        parentPort?.postMessage(`[${moment().tz(timezone)
+        console.log(`[${moment().tz(timezone)
             .format(format_string)}] [Database Logger] New data from crawler "${crawler.getName()}":`);
-        parentPort?.postMessage(`    Station Name .......... ${data.StationName}`);
-        parentPort?.postMessage(`    Station GPS Location .. ${data.StationLocation.lat} ${data.StationLocation.lon}`);
-        parentPort?.postMessage(`    Fuel Type ............. ${data.FuelType || "NOT_SPECIFIED"}`);
-        parentPort?.postMessage(`    Fuel Name ............. ${data.FuelName}`);
-        parentPort?.postMessage(`    Fuel Price ............ ${data.FuelPrice}`);
+        console.log(`    Station Name .......... ${data.StationName}`);
+        console.log(`    Station GPS Location .. ${data.StationLocation.lat} ${data.StationLocation.lon}`);
+        console.log(`    Fuel Type ............. ${data.FuelType || "NOT_SPECIFIED"}`);
+        console.log(`    Fuel Name ............. ${data.FuelName}`);
+        console.log(`    Fuel Price ............ ${data.FuelPrice}`);
 
-        parentPort?.postMessage(`\n[${moment().tz(timezone)
+        console.log(`\n[${moment().tz(timezone)
             .format(format_string)}] [Database Logger] Copying data into database...`);
 
         // TODO: Database logging logic

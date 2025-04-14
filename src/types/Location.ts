@@ -14,8 +14,8 @@
 // Types declarations
 type Location = {
     name: string;
-    lon: number;
     lat: number;
+    lon: number;
 };
 
 export default Location;

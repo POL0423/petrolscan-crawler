@@ -25,30 +25,24 @@ import WebCrawler from "./WebCrawler.js";
 
 class ONOCrawler extends WebCrawler {
     constructor(logger: DBLogger) {
-        super("ONO", "https://www.example.com/", logger);
+        super("ONO", "https://tank-ono.cz/cz/index.php", logger);
     }
 
     public async start(): Promise<void> {
-        // Check interruption flag (should be false, but you never know)
-        if (this.isInterrupted()) return;
-
         // Pass this object
         const thisObj = this;
-        
+
         // Create a new crawler
         const crawler = new PlaywrightCrawler({
             requestHandler: async ({ page }) => {
-                // Check if interrupted
-                if (thisObj.isInterrupted()) return;
-                
-                // Log start
-                parentPort?.postMessage(`Start ${this.getName()}`);
-                
+                const timezone = moment.tz.guess();     // Get local timezone
+
                 // Crawling logic
                 //-------------------------------------------------------------
                 
                 // TODO: Crawling logic
-                parentPort?.postMessage(`DEBUG: Page name ${page.title()}`);
+                console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")
+                    }] [Process] DEBUG: Page name ${await page.title()}`);
                 
                 // Save the page details
                 Dataset.pushData({

@@ -38,14 +38,6 @@ abstract class WebCrawler {
         return this.url;
     }
 
-    public interruptExecution(): boolean {
-        return (this.interrupt = true);
-    }
-
-    public isInterrupted(): boolean {
-        return this.interrupt;
-    }
-
     public abstract start(): Promise<void>;
 
     public static resolveFuelQuality(station: string, fuelName: string): FuelQuality {

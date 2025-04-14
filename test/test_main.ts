@@ -13,13 +13,18 @@
 
 // Imports
 //-------------------------------------------------
-import fs from 'fs';
-import { Worker, SHARE_ENV, MessageChannel } from 'worker_threads';
 import moment from 'moment-timezone';
 
-// Disabled crawlers (Check out README.md for their exclusion reasons)
-const disabled = ['orlen', 'shell', 'eurooil', 'mol', 'omv', 'prim'];
+// Logic
+//-------------------------------------------------
+const timezone = moment.tz.guess();     // Get local timezone
+
+// Log start
+console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Test Starting...`);
 
 // TODO: Basic connectivity and database logging test
 
 // TODO: Crawler tests
+
+// Log end
+console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Test Finished.`);
