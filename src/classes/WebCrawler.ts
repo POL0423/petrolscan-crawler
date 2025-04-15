@@ -38,6 +38,10 @@ abstract class WebCrawler {
         return this.url;
     }
 
+    public getLogger(): DBLogger {
+        return this.logger;
+    }
+
     public abstract start(): Promise<void>;
 
     public static resolveFuelQuality(station: string, fuelName: string): FuelQuality {
