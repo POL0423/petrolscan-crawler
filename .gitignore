@@ -59,6 +59,7 @@ coverage/
 
 # Project specific
 storage/
+error*.png
 
 # OS specific files
 .DS_Store
