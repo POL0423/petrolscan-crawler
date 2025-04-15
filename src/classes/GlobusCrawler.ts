@@ -157,7 +157,6 @@ class GlobusCrawler extends WebCrawler {
                         await changeButton.waitFor();
                         if (changeButton) {
                             await changeButton.click();
-                            await page.waitForLoadState('networkidle');
                         } else {
                             console.warn(`${thisObj.getName()} crawler couldn't find "Změnit" button, trying alternative approach...`);
                             // Alternative: go back to main page and start over
@@ -168,9 +167,11 @@ class GlobusCrawler extends WebCrawler {
                             const cookieBtn = page.locator('button#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
                             if (cookieBtn) {
                                 await cookieBtn.click();
-                                await page.waitForLoadState('networkidle');
                             }
                         }
+
+                        // Wait for network to settle
+                        await page.waitForLoadState('networkidle');
                     }
                     
                     console.log(`${thisObj.getName()} crawler finished successfully.`);
