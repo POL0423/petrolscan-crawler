@@ -26,4 +26,4 @@
 #   --silly                 Outputs everything (including debugging information)
 # Flags are sorted from highest to lowest. Lower modes also output higher modes.
 # Any other flag will be ignored. Default mode is "--notice".
-0 12 * * * /app/scripts/run_cron.sh --silent &>> /var/log/cron.log
+0 3 * * * /app/scripts/run_cron.sh --silent &>> /var/log/cron.log

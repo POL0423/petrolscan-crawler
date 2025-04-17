@@ -17,11 +17,13 @@
 // Global imports
 import { PlaywrightCrawler, Dataset } from 'crawlee';
 import moment from 'moment-timezone';
-import { parentPort } from 'worker_threads';
 
 // Local imports
 import DBLogger from './DBLogger.js';
 import WebCrawler from "./WebCrawler.js";
+
+// Logic
+//-------------------------------------------------
 
 class ONOCrawler extends WebCrawler {
     constructor(logger: DBLogger) {

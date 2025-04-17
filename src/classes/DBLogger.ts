@@ -54,7 +54,7 @@ class DBLogger {
             fuel_quality VARCHAR(255),
             fuel_name VARCHAR(255) NOT NULL,
             fuel_price FLOAT NOT NULL
-        )`);
+        );`);
         // Created table should have following structure:
         // id INT AUTO_INCREMENT PRIMARY KEY, ......................... ID of the record (auto-incremented)
         // timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, .... Timestamp in UTC (YYYY-MM-DD HH:mm:ss)
@@ -70,40 +70,62 @@ class DBLogger {
         connection.end();
     }
 
-    public checkUpdates(data: DBData): boolean {
+    public async checkUpdates(data: DBData): Promise<boolean> {
         // Update check flag
         let updated = false;
 
         // Create connection
-        // let connection = mysql.createConnection({
-            // host: this.settings.hostname,
-            // port: Number.parseInt(this.settings.port),
-            // user: this.settings.username,
-            // password: this.settings.password,
-            // database: this.settings.database
-        // });
-        // connection.connect();
+        let connection = mysql.createConnection({
+            host: this.settings.hostname,
+            port: Number.parseInt(this.settings.port),
+            user: this.settings.username,
+            password: this.settings.password,
+            database: this.settings.database,
+            rowsAsArray: true
+        }).promise();
 
         console.log(`[${moment().tz(moment.tz.guess())
             .format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Checking for updates...`);
         
-        // Debug
-        console.log(`[${moment().tz(moment.tz.guess())
-            .format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Debug Query: SELECT * FROM petrolscan_data
-            WHERE station_name="${data.StationName}"
-            AND station_loc_name = "${data.StationLocation.name}"
-            AND station_loc_lat=${data.StationLocation.lat}
-            AND station_loc_lon=${data.StationLocation.lon}
-            AND fuel_name="${data.FuelName}"
-            AND fuel_type="${data.FuelType}" AND fuel_quality="${data.FuelQuality}"`);
-
         // TODO: Check if data already exists in DB
-        // connection.query(`SELECT * FROM petrolscan_data
-            // WHERE station_name="${data.StationName}"
-            // AND fuel_name="${data.FuelName}"
-            // AND station_loc_lat="${data.StationLocation.lat}"
-            // AND station_loc_lon="${data.StationLocation.lon}"
-            // AND fuel_type="${data.FuelType}" AND fuel_quality="${data.FuelQuality}"`);
+        try {
+            const [rows, fields] = await connection.query(`SELECT * FROM petrolscan_data
+                WHERE station_name = ?
+                AND station_loc_name = ?
+                AND station_loc_lat = ?
+                AND station_loc_lon = ?
+                AND fuel_name = ?
+                AND fuel_type = ? AND fuel_quality=?;`,
+                [
+                    data.StationName,
+                    data.StationLocation.name,
+                    data.StationLocation.lat,
+                    data.StationLocation.lon,
+                    data.FuelName,
+                    data.FuelType,
+                    data.FuelQuality
+                ]
+            );
+
+            // Debug
+            console.log(`[${moment().tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Debug Result:`);
+            console.log(rows);
+            console.log(fields);
+        } catch (error) {
+            // Log error
+            console.error(`[${moment().tz(moment.tz.guess())
+                .format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Error while checking for updates: ${error}`);
+
+            // Make sure updated is set to false and release connection
+            updated = false;
+            connection.end();
+
+            // Return check flag
+            return updated;
+        }
+
+        // Release connection
+        await connection.end();
 
         // Return check flag
         return updated;
