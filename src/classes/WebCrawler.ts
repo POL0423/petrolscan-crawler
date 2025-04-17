@@ -16,6 +16,7 @@
 import DBLogger from './DBLogger.js';
 import FuelType from '../types/FuelType.js';
 import FuelQuality from '../types/FuelQuality.js';
+import moment from 'moment-timezone';
 
 abstract class WebCrawler {
     private name: string;
@@ -40,6 +41,10 @@ abstract class WebCrawler {
 
     public getLogger(): DBLogger {
         return this.logger;
+    }
+
+    public printMessage(message: string): void {
+        console.log(`${moment().tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss zz")} [${this.name} crawler] ${message}`);
     }
 
     public abstract start(): Promise<void>;

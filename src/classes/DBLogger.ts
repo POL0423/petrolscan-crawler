@@ -75,25 +75,26 @@ class DBLogger {
         let updated = false;
 
         // Create connection
-        let connection = mysql.createConnection({
-            host: this.settings.hostname,
-            port: Number.parseInt(this.settings.port),
-            user: this.settings.username,
-            password: this.settings.password,
-            database: this.settings.database
-        });
-        connection.connect();
+        // let connection = mysql.createConnection({
+            // host: this.settings.hostname,
+            // port: Number.parseInt(this.settings.port),
+            // user: this.settings.username,
+            // password: this.settings.password,
+            // database: this.settings.database
+        // });
+        // connection.connect();
 
-        console.log(`[${moment().tz("UTC")
-            .format("YYYY-MM-DD HH:mm:ss")}] [Database Logger] Checking for updates...`);
+        console.log(`[${moment().tz(moment.tz.guess())
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Checking for updates...`);
         
         // Debug
-        console.log(`[${moment().tz("UTC")
-            .format("YYYY-MM-DD HH:mm:ss")}] [Database Logger] Query: SELECT * FROM petrolscan_data
+        console.log(`[${moment().tz(moment.tz.guess())
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Debug Query: SELECT * FROM petrolscan_data
             WHERE station_name="${data.StationName}"
+            AND station_loc_name = "${data.StationLocation.name}"
+            AND station_loc_lat=${data.StationLocation.lat}
+            AND station_loc_lon=${data.StationLocation.lon}
             AND fuel_name="${data.FuelName}"
-            AND station_loc_lat="${data.StationLocation.lat}"
-            AND station_loc_lon="${data.StationLocation.lon}"
             AND fuel_type="${data.FuelType}" AND fuel_quality="${data.FuelQuality}"`);
 
         // TODO: Check if data already exists in DB
@@ -108,23 +109,30 @@ class DBLogger {
         return updated;
     }
     
-    public log(data: DBData, crawler: WebCrawler): void {
+    public log(data: DBData): void {
         const timezone = moment.tz.guess();                 // Get local timezone
         const format_string = "YYYY-MM-DD HH:mm:ss zz";     // Datetime format      Year-Month-Day Hours:Minutes:Seconds Timezone
 
         // Log new data to console
         console.log(`[${moment().tz(timezone)
-            .format(format_string)}] [Database Logger] New data from crawler "${crawler.getName()}":`);
-        console.log(`    Station Name .......... ${data.StationName}`);
-        console.log(`    Station GPS Location .. ${data.StationLocation.lat} ${data.StationLocation.lon}`);
-        console.log(`    Fuel Type ............. ${data.FuelType || "NOT_SPECIFIED"}`);
-        console.log(`    Fuel Name ............. ${data.FuelName}`);
-        console.log(`    Fuel Price ............ ${data.FuelPrice}`);
+            .format(format_string)}] [Database Logger] New data:`);
+        console.log(`    Station Name .............. ${data.StationName}`);
+        console.log(`    Station Location Name ..... ${data.StationLocation.name}`);
+        console.log(`    Station GPS Location ...... ${data.StationLocation.lat} ${data.StationLocation.lon}`);
+        console.log(`    Fuel Type ................. ${data.FuelType || "N/A"}`);
+        console.log(`    Fuel Quality .............. ${data.FuelQuality || "N/A"}`);
+        console.log(`    Fuel Name ................. ${data.FuelName}`);
+        console.log(`    Fuel Price ................ ${data.FuelPrice.toFixed(2)} CZK`);
 
+        // Log start
         console.log(`\n[${moment().tz(timezone)
             .format(format_string)}] [Database Logger] Copying data into database...`);
 
         // TODO: Database logging logic
+
+        // Log end
+        console.log(`[${moment().tz(timezone)
+            .format(format_string)}] [Database Logger] Data copied into database.`);
     }
 }
 

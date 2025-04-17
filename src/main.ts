@@ -36,8 +36,14 @@ if (!arg || !allowed.includes(arg)) {
     process.exit(1);
 }
 
+// Log start
+console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Starting...`);
+
 // Create crawler
 const crawler: WebCrawler = (arg === "Globus") ? new GlobusCrawler(logger) : new ONOCrawler(logger);
 
 // Start crawler
-crawler.start();
+await crawler.start();
+
+// Log end
+console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Finished.`);
