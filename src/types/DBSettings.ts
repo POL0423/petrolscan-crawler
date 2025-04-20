@@ -18,7 +18,7 @@
 //-------------------------------------------------
 type DBSettings = {
     hostname: string;       // Database server hostname
-    port: string;           // Database server port
+    port: number;           // Database server port
     username: string;       // Database server username
     password: string;       // Database server user password
     database: string;       // Database name

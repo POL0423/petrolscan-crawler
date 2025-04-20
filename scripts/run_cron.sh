@@ -63,6 +63,9 @@ npm run start:prod -- Globus $($MODE)
 echo -e "$(date +"[%F %T %Z]") [Service] Running ONO crawler."
 npm run start:prod -- ONO $($MODE)
 
+echo -e "$(date +"[%F %T %Z]") [Service] Running Makro crawler."
+npm run start:prod -- Makro $($MODE)
+
 # Resolve termination or successful finish
 if [ $? -eq 0 ]
 then

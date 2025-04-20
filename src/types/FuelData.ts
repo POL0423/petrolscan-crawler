@@ -8,7 +8,7 @@
  * 
  * @see https://crawlee.dev
  * 
- * File: src/types/DBData.ts
+ * File: src/types/FuelData.ts
  */
 
 // Imports

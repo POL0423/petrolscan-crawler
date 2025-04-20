@@ -44,7 +44,7 @@ abstract class WebCrawler {
     }
 
     public printMessage(message: string): void {
-        console.log(`${moment().tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss zz")} [${this.name} crawler] ${message}`);
+        console.log(`[${moment().tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
     }
 
     public abstract start(): Promise<void>;

@@ -459,12 +459,12 @@ class GlobusCrawler extends WebCrawler {
 
                             // Debug
                             console.debug(`[${moment().tz(moment.tz.guess())
-                                .format("YYYY-MM-DD HH:mm:ss zz")}] [${thisObj.getName()} crawler] Debugging info`);
+                                .format("YYYY-MM-DD HH:mm:ss zz")}] [${thisObj.getName()} crawler] Collected data`);
                             console.debug(`    Station name: ........ ${stationName}`);
                             console.debug(`    Location: ............ ${location.name} (${location.lat}, ${location.lon})`);
                             console.debug(`    Fuel name: ........... ${fuelName}`);
-                            console.debug(`    Fuel type: ........... ${fuelType}`);
-                            console.debug(`    Fuel quality: ........ ${fuelQuality}`);
+                            console.debug(`    Fuel type: ........... ${fuelType ?? "N/A"}`);
+                            console.debug(`    Fuel quality: ........ ${fuelQuality ?? "N/A"}`);
                             console.debug(`    Fuel price: .......... ${fuelPrice.toFixed(2)} CZK`);
 
                             // Create database data object
