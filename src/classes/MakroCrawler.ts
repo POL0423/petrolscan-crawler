@@ -31,11 +31,28 @@ class MakroCrawler extends WebCrawler {
     }
 
     public async start(): Promise<void> {
+        // Log start
+        this.printMessage("Starting the extraction process...");
+
         // Pass this object
         const thisObj = this;
 
         // Create a new crawler
         const crawler = new PlaywrightCrawler({
+            // Timeouts
+            navigationTimeoutSecs: 180,         // navigation timeout of ........... 3 minutes
+            requestHandlerTimeoutSecs: 600,     // request handler timeout of ..... 10 minutes
+            maxRequestRetries: 3,
+            // Headers
+            preNavigationHooks: [
+                async ({ page }) => {
+                    // Set real user agent of Google Chrome browser
+                    await page.setExtraHTTPHeaders({
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept-Language': 'cs,en-US;q=0.9,en;q=0.8'
+                    });
+                }
+            ],
             requestHandler: async ({ page }) => {
                 const timezone = moment.tz.guess();     // Get local timezone
 
@@ -57,6 +74,9 @@ class MakroCrawler extends WebCrawler {
 
         // Run the crawler
         await crawler.run([this.getUrl()]);
+
+        // Log end
+        this.printMessage("Crawler finished.");
     }
 }
 
