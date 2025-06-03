@@ -67,11 +67,11 @@ class GlobusCrawler extends WebCrawler {
                     const cookieConsentBtn = page.locator('button#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
                     try {
                         await cookieConsentBtn.waitFor({ timeout: 10000 });
-                        console.log('Accepting cookies...');
+                        thisObj.printMessage('Accepting cookies...');
                         await cookieConsentBtn.click();
                         await page.waitForLoadState('networkidle');
                     } catch (_) {
-                        console.log('No cookie consent dialog found or acceptance failed');
+                        thisObj.printMessage('No cookie consent dialog found or acceptance failed');
                     }
     
                     // Step 3: Click on "Vybrat pobočku" button
@@ -81,10 +81,10 @@ class GlobusCrawler extends WebCrawler {
                     await page.waitForLoadState('networkidle');
     
                     // Dynamically wait for location dropdown
-                    console.log('Waiting for location dropdown to appear...');
+                    thisObj.printMessage('Waiting for location dropdown to appear...');
                     await page.waitForSelector('#input_9', { timeout: 30000 })
                         .catch(async _ => {
-                            console.log('Failed to find location selector, trying alternative approach...');
+                            thisObj.printMessage('Failed to find location selector, trying alternative approach...');
                             // Zkusíme kliknout znovu na tlačítko
                             await selectLocationBtn.click({ force: true });
                             await page.waitForLoadState('networkidle');
@@ -92,14 +92,14 @@ class GlobusCrawler extends WebCrawler {
                         });
     
                     // Step 4: Get all locations
-                    console.log(`${this.getName()} crawler is collecting all available locations...`);
+                    thisObj.printMessage(`${this.getName()} crawler is collecting all available locations...`);
     
                     // Check if location items are loaded
                     await page.waitForFunction(() => {
                         const list = document.querySelector('#input_9 > ul');
                         return list && list.children.length > 0;
                     }, { timeout: 30000 }).catch(_ => {
-                        console.warn('Timeout waiting for location items to load');
+                        thisObj.printMessage('Timeout waiting for location items to load', "WARN");
                     });
     
                     const locations = await page.locator('#input_9 > ul > li').evaluateAll((elements: any[]) => {
@@ -125,14 +125,14 @@ class GlobusCrawler extends WebCrawler {
                         }).filter(loc => loc.value);    // Filter out any null values
                     });
     
-                    console.log(`Found ${locations.length} locations.`);
+                    thisObj.printMessage(`Found ${locations.length} locations.`);
     
                     // Save locations to a structure
                     const allLocations = [...locations];
     
                     // Click outside the location dialog to close it
                     await page.click('div#__nuxt header#header').catch(_ => {
-                        console.log('Failed to close location dialog by clicking header');
+                        thisObj.printMessage('Failed to close location dialog by clicking header');
                     });
     
                     // All locations structure declaration
@@ -142,7 +142,7 @@ class GlobusCrawler extends WebCrawler {
                     for (const location of allLocations) {
                         // Create a new browser for each location
                         // That ensures clean state for each location processing
-                        console.log(`Processing location: ${location.name} (${location.value})`);
+                        thisObj.printMessage(`Processing location: ${location.name} (${location.value})`);
                         
                         try {
                             // Use a new browser for each location
@@ -158,15 +158,15 @@ class GlobusCrawler extends WebCrawler {
                                 const cookieBtn = newPage.locator('button#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
                                 try {
                                     await cookieBtn.waitFor({ timeout: 10000 });
-                                    console.log('Accepting cookies...');
+                                    thisObj.printMessage('Accepting cookies...');
                                     await cookieBtn.click();
                                     await newPage.waitForLoadState('networkidle');
                                 } catch (e) {
-                                    console.log('No cookie dialog visible');
+                                    thisObj.printMessage('No cookie dialog visible');
                                 }
                                 
                                 // Click on "Vybrat pobočku" button
-                                console.log('Clicking on "Vybrat pobočku" button...');
+                                thisObj.printMessage('Clicking on "Vybrat pobočku" button...');
                                 const locBtn = newPage.locator('div#__nuxt header#header button.btn-lg');
                                 await locBtn.waitFor({ timeout: 20000 });
                                 
@@ -175,11 +175,11 @@ class GlobusCrawler extends WebCrawler {
                                 await newPage.waitForLoadState('networkidle');
                                 
                                 // Verify that location selection dialog is visible, using an extended timeout
-                                console.log('Verifying location selection dialog is visible...');
+                                thisObj.printMessage('Verifying location selection dialog is visible...');
                                 await newPage.waitForSelector('#input_9', { timeout: 20000 });
                                 
                                 // Wait for locations list to be fully loaded
-                                console.log('Waiting for locations list to be fully loaded...');
+                                thisObj.printMessage('Waiting for locations list to be fully loaded...');
                                 await newPage.waitForFunction(() => {
                                     const list = document.querySelector('#input_9 > ul');
                                     return list && list.children.length > 0;
@@ -187,14 +187,14 @@ class GlobusCrawler extends WebCrawler {
                                 
                                 // Find the specified location item
                                 const locItemSelector = `#input_9 > ul > li[data-option-value="${location.value}"] > label`;
-                                console.log(`Looking for location item: ${locItemSelector}`);
+                                thisObj.printMessage(`Looking for location item: ${locItemSelector}`);
                                 
                                 // Click on the specified location -> use 3 different methods
                                 let locationSelected = false;
                                 
                                 // Method 1: JavaScript click
                                 try {
-                                    console.log('Trying JavaScript click...');
+                                    thisObj.printMessage('Trying JavaScript click...');
                                     await newPage.evaluate((selector: string) => {
                                         const element = document.querySelector(selector);
                                         if (element instanceof HTMLElement) {
@@ -211,16 +211,16 @@ class GlobusCrawler extends WebCrawler {
                                     
                                     if (isDialogClosed) {
                                         locationSelected = true;
-                                        console.log('Location selected using JavaScript click');
+                                        thisObj.printMessage('Location selected using JavaScript click');
                                     }
                                 } catch (e) {
-                                    console.log('JavaScript click failed, trying next method');
+                                    thisObj.printMessage('JavaScript click failed, trying next method');
                                 }
                                 
                                 // Method 2: Force click
                                 if (!locationSelected) {
                                     try {
-                                        console.log('Trying force click...');
+                                        thisObj.printMessage('Trying force click...');
                                         await newPage.locator(locItemSelector).click({ force: true, timeout: 10000 });
                                         
                                         // Wait for the data to load
@@ -232,17 +232,17 @@ class GlobusCrawler extends WebCrawler {
                                         
                                         if (isDialogClosed) {
                                             locationSelected = true;
-                                            console.log('Location selected using force click');
+                                            thisObj.printMessage('Location selected using force click');
                                         }
                                     } catch (e) {
-                                        console.log('Force click failed, trying next method');
+                                        thisObj.printMessage('Force click failed, trying next method');
                                     }
                                 }
                                 
                                 // Method 3: Search using text
                                 if (!locationSelected) {
                                     try {
-                                        console.log('Trying text search...');
+                                        thisObj.printMessage('Trying text search...');
                                         
                                         const allLocationItems = newPage.locator('#input_9 > ul > li');
                                         const count = await allLocationItems.count();
@@ -259,7 +259,7 @@ class GlobusCrawler extends WebCrawler {
                                             if (itemText && itemText.includes(locationNameParts[0])) {
                                                 if(!multipart || itemText.includes(locationNameParts[1]))
                                                 {
-                                                    console.log(`Found matching location by text: "${itemText}"`);
+                                                    thisObj.printMessage(`Found matching location by text: "${itemText}"`);
                                                     await allLocationItems.nth(i).locator('label').click({ force: true });
 
                                                     // Wait for the data to load
@@ -271,14 +271,14 @@ class GlobusCrawler extends WebCrawler {
 
                                                     if (isDialogClosed) {
                                                         locationSelected = true;
-                                                        console.log('Location selected using text search');
+                                                        thisObj.printMessage('Location selected using text search');
                                                         break;
                                                     }
                                                 }
                                             }
                                         }
                                     } catch (e) {
-                                        console.log('Text search failed');
+                                        thisObj.printMessage('Text search failed');
                                     }
                                 }
                                 
@@ -290,7 +290,7 @@ class GlobusCrawler extends WebCrawler {
                                 await newPage.waitForLoadState('networkidle');
                                 
                                 // Wait for the detail page to load
-                                console.log('Waiting for detail page to load...');
+                                thisObj.printMessage('Waiting for detail page to load...');
                                 await newPage.locator('#teleport-target div.flex.items-center.gap-x-4')
                                     .waitFor({ timeout: 15000 });
                                 
@@ -319,7 +319,7 @@ class GlobusCrawler extends WebCrawler {
 
                                 // Check if there are any fuel data
                                 if (fuels.length === 0) {
-                                    console.log('No fuel data found, skipping.');
+                                    thisObj.printMessage('No fuel data found, skipping.');
                                     continue;
                                 }
                                 
@@ -331,18 +331,18 @@ class GlobusCrawler extends WebCrawler {
                                 };
                                 
                                 // Log data for debugging
-                                console.debug(`Station: ${locationData.stationName}`);
-                                console.debug(`Location: ${locationData.location}`);
-                                console.debug('Fuels:');
+                                thisObj.printMessage(`Station: ${locationData.stationName}`, "DEBUG");
+                                thisObj.printMessage(`Location: ${locationData.location}`, "DEBUG");
+                                thisObj.printMessage('Fuels:', "DEBUG");
                                 fuels.forEach((fuel: { name: string; price: number; }) => {
-                                    console.debug(`  - ${fuel.name}: ${fuel.price.toFixed(2)} CZK`);
+                                    thisObj.printMessage(`  - ${fuel.name}: ${fuel.price.toFixed(2)} CZK`, "DEBUG");
                                 });
                                 
                                 // Add location data to collection
                                 fuelData.push(locationData);
                                 
                             } catch (error) {
-                                console.error(`Error processing location ${location.name}: ${error}`);
+                                thisObj.printMessage(`Error processing location ${location.name}: ${error}`, "ERROR");
                                 await newPage.screenshot({ path: `error-${location.value}.png` });
                             } finally {
                                 // Always close the browser
@@ -350,13 +350,13 @@ class GlobusCrawler extends WebCrawler {
                                 await browser.close();
                             }
                         } catch (browserError) {
-                            console.error(`Error creating browser for location ${location.name}: ${browserError}`);
+                            thisObj.printMessage(`Error creating browser for location ${location.name}: ${browserError}`, "ERROR");
                         }
                     }
     
                     // Print statistics
-                    console.log(`${thisObj.getName()} crawler finished successfully.`);
-                    console.log(`Collected data from ${fuelData.length} locations with a total of ${fuelData
+                    thisObj.printMessage(`${thisObj.getName()} crawler finished successfully.`);
+                    thisObj.printMessage(`Collected data from ${fuelData.length} locations with a total of ${fuelData
                         .reduce((sum, loc) => sum + loc.fuels.length, 0)} fuel prices`);
                     
                     // Save collected data to local dataset
@@ -389,7 +389,8 @@ class GlobusCrawler extends WebCrawler {
                         let isArray = Array.isArray(osmData);
                         if(!isArray) {
                             // Print error
-                            console.error(`Returned data for ${data.location} is not an array. Using Null Island coordinates.`);
+                            thisObj.printMessage(`Returned data for ${data.location
+                                } is not an array. Using Null Island coordinates.`, "ERROR");
                             
                             // Set coordinates to (0, 0)
                             osmLat = 0;
@@ -411,8 +412,8 @@ class GlobusCrawler extends WebCrawler {
                         // Check if coordinates were found
                         if (Number.isNaN(osmLat) || Number.isNaN(osmLon)) {
                             // Print error
-                            console.error(`Failed to find fuel station location coordinates for ${data.location
-                                }. Trying to use store coordinates.`);
+                            thisObj.printMessage(`Failed to find fuel station location coordinates for ${
+                                data.location}. Trying to use store coordinates.`, "ERROR");
                             
                             // Prepare found flag
                             let found = false;
@@ -431,8 +432,8 @@ class GlobusCrawler extends WebCrawler {
 
                             if (!found) {
                                 // Print error
-                                console.error(`Failed to find store location coordinates for ${data.location
-                                    }. Using Null Island coordinates.`);
+                                thisObj.printMessage(`Failed to find store location coordinates for ${data.location
+                                    }. Using Null Island coordinates.`, "ERROR");
                                 
                                 // Set coordinates to (0, 0)
                                 osmLat = 0;
@@ -458,14 +459,14 @@ class GlobusCrawler extends WebCrawler {
                             let fuelQuality = WebCrawler.resolveFuelQuality('globus', fuelName);
 
                             // Debug
-                            console.debug(`[${moment().tz(moment.tz.guess())
-                                .format("YYYY-MM-DD HH:mm:ss zz")}] [${thisObj.getName()} crawler] Collected data`);
-                            console.debug(`    Station name: ........ ${stationName}`);
-                            console.debug(`    Location: ............ ${location.name} (${location.lat}, ${location.lon})`);
-                            console.debug(`    Fuel name: ........... ${fuelName}`);
-                            console.debug(`    Fuel type: ........... ${fuelType ?? "N/A"}`);
-                            console.debug(`    Fuel quality: ........ ${fuelQuality ?? "N/A"}`);
-                            console.debug(`    Fuel price: .......... ${fuelPrice.toFixed(2)} CZK`);
+                            thisObj.printMessage(`Collected data`, "DEBUG");
+                            thisObj.printMessage(`    Station name: .... ${stationName}`, "DEBUG");
+                            thisObj.printMessage(`    Location: ........ ${location.name}`, "DEBUG");
+                            thisObj.printMessage(`    GPS coords: ...... ${location.lat}, ${location.lon}`, "DEBUG");
+                            thisObj.printMessage(`    Fuel name: ....... ${fuelName}`, "DEBUG");
+                            thisObj.printMessage(`    Fuel type: ....... ${fuelType ?? "N/A"}`, "DEBUG");
+                            thisObj.printMessage(`    Fuel quality: .... ${fuelQuality ?? "N/A"}`, "DEBUG");
+                            thisObj.printMessage(`    Fuel price: ...... ${fuelPrice.toFixed(2)} CZK`, "DEBUG");
 
                             // Create database data object
                             let logData: DBData = {
@@ -488,8 +489,7 @@ class GlobusCrawler extends WebCrawler {
                         }
                     }
                 } catch (error) {
-                    console.error(`[${moment().tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss zz")
-                        }] [Process] \x1b[31;1mError in ${thisObj.getName()} crawler: ${error}\x1b[0m`);
+                    thisObj.printMessage(`\x1b[31;1mError in ${thisObj.getName()} crawler: ${error}\x1b[0m`, "ERROR");
                 }
             }
         });

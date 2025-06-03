@@ -17,6 +17,7 @@ import DBLogger from './DBLogger.js';
 import FuelType from '../types/FuelType.js';
 import FuelQuality from '../types/FuelQuality.js';
 import moment from 'moment-timezone';
+import MessageType from '../types/MessageType.js';
 
 abstract class WebCrawler {
     private name: string;
@@ -43,8 +44,22 @@ abstract class WebCrawler {
         return this.logger;
     }
 
-    public printMessage(message: string): void {
-        console.log(`[${moment().tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
+    public printMessage(message: string, type: MessageType = "LOG"): void {
+        if (type === "LOG")
+            console.log(`[${moment().tz(moment.tz.guess())
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
+        else if (type === "DEBUG")
+            console.debug(`[${moment().tz(moment.tz.guess())
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
+        else if (type === "ERROR")
+            console.error(`[${moment().tz(moment.tz.guess())
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
+        else if (type === "WARN")
+            console.warn(`[${moment().tz(moment.tz.guess())
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
+        else
+            console.warn(`[${moment().tz(moment.tz.guess())
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Wrong message type: '${type}' for message: '${message}'`);
     }
 
     public abstract start(): Promise<void>;
@@ -63,8 +78,8 @@ abstract class WebCrawler {
             ||
             pslower === "shell" && ftlower.includes("fuelsave")                     // Shell
             ||
-            pslower === "ono" && ftlower.includes("n95c") && ftlower.includes("dc")     // ONO (GIF filename)
-            ||
+            pslower === "ono" && (ftlower.includes("natural 95") || ftlower.includes("diesel") && !ftlower.includes("+"))
+            ||                                                                      // ONO
             pslower === "mol" && !ftlower.includes("plus")                          // MOL (*)
             ||
             pslower === "omv" && !ftlower.includes("maxxmotion") && (ftlower.includes("natural") || ftlower.includes("diesel"))
@@ -83,8 +98,8 @@ abstract class WebCrawler {
             pslower === "shell" && ftlower.includes("v-power")                      // Shell
                 && !ftlower.includes("racing")      // Racing is its own category!
             ||
-            pslower === "ono" && ftlower.includes("n98c")                           // ONO (GIF filename)
-            ||
+            pslower === "ono" && (ftlower.includes("natural 98") || ftlower.includes("diesel+"))
+            ||                                                                      // ONO
             pslower === "mol" && ftlower.includes("plus")                           // MOL (*)
             ||
             pslower === "omv" && (ftlower.includes("maxxmotion") && !ftlower.includes("100"))       // OMV
@@ -132,8 +147,8 @@ abstract class WebCrawler {
             pslower === "eurooil"                           // EuroOil
                 && (ftlower.includes("ba 95") || ftlower.includes("ba 98") || ftlower.includes("ba 100")) ||
 
-            pslower === "ono"                               // ONO (GIF filename)
-                && (ftlower.includes("n95c") || ftlower.includes("n98c")) ||
+            pslower === "ono"                               // ONO
+                && (ftlower.includes("natural")) ||
             
             pslower === "mol"                               // MOL (*)
                 && ftlower.includes("benzin")
@@ -150,8 +165,8 @@ abstract class WebCrawler {
             pslower === "shell"                             // Shell
                 && ftlower.startsWith("nafta") ||
 
-            pslower === "ono"                               // ONO (GIF filename)
-                && ftlower.includes("dc")
+            pslower === "ono"                               // ONO
+                && ftlower.includes("diesel")
 
             //----------------------------------------- No data
             // Prim (**)
@@ -167,8 +182,7 @@ abstract class WebCrawler {
 
         if (
             // LPG
-            ftlower.includes("lpg") ||              // Orlen + EuroOil + OMV
-            ftlower.includes("lpgc")                // ONO (GIF filename)
+            ftlower.includes("lpg")                 // Orlen + EuroOil + OMV + ONO
 
             //----------------------------------------- No data
             // Globus + Shell + MOL + Prim (**)
@@ -184,8 +198,7 @@ abstract class WebCrawler {
 
         if (
             // AdBlue
-            ftlower.includes("adblue") ||           // Globus + EuroOil + MOL (*)
-            ftlower.includes("abc")                 // ONO (GIF filename)
+            ftlower.includes("adblue")              // Globus + EuroOil + MOL (*) + ONO
 
             //----------------------------------------- No data
             // Orlen + Shell + OMV + Prim (**)

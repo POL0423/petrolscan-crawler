@@ -42,7 +42,7 @@ console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Proces
 
 // Create crawler
 const crawler: WebCrawler = (arg === "Globus") ? new GlobusCrawler(logger)
-    : ( (arg === "Makro") ? new MakroCrawler(logger) : new ONOCrawler(logger));
+    : ( (arg === "Makro") ? new MakroCrawler(logger) : new ONOCrawler(logger) );
 
 // Start crawler
 await crawler.start();
