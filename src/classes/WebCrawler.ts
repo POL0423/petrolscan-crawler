@@ -68,7 +68,7 @@ abstract class WebCrawler {
         let pslower = station.toLowerCase();            // Petrol station name (converted to lowercase)
         let ftlower = fuelName.toLowerCase();           // Fuel name (converted to lowercase)
 
-        // TODO: Write quality sorting for each petrol station
+        // Quality sorting for each petrol station
         if (
             // Regular
             pslower === "globus" && !ftlower.includes("plus")                       // Globus
@@ -83,7 +83,9 @@ abstract class WebCrawler {
             pslower === "mol" && !ftlower.includes("plus")                          // MOL (*)
             ||
             pslower === "omv" && !ftlower.includes("maxxmotion") && (ftlower.includes("natural") || ftlower.includes("diesel"))
-                                                                                    // OMV
+            ||                                                                      // OMV
+            pslower === "makro" && !ftlower.includes("drive") && (ftlower.includes("natural") || ftlower.includes("diesel"))
+                                                                                    // Makro
             //----------------------------------------- No data
             // EuroOil (**) + Prim (**)
         ) return "REGULAR";
@@ -102,7 +104,9 @@ abstract class WebCrawler {
             ||                                                                      // ONO
             pslower === "mol" && ftlower.includes("plus")                           // MOL (*)
             ||
-            pslower === "omv" && (ftlower.includes("maxxmotion") && !ftlower.includes("100"))       // OMV
+            pslower === "omv" && (ftlower.includes("maxxmotion") && !ftlower.includes("100"))
+            ||                                                                      // OMV
+            pslower === "makro" && ftlower.includes("drive")                        // Makro
 
             //----------------------------------------- No data
             // EuroOil (**) + Prim (**)
@@ -115,7 +119,7 @@ abstract class WebCrawler {
             pslower === "omv" && ftlower.includes("maxxmotion 100")                 // OMV
 
             //----------------------------------------- No data
-            // Globus + Orlen + EuroOil (**) + ONO + Prim (**)
+            // Globus + Orlen + EuroOil (**) + ONO + Prim (**) + Makro
         ) return "RACING";
 
         // Nothing else
@@ -133,6 +137,7 @@ abstract class WebCrawler {
         let pslower = station.toLowerCase();            // Petrol station name (converted to lowercase)
         let ftlower = fuelName.toLowerCase();           // Fuel name (converted to lowercase)
 
+        // Fuel type sorting for each petrol station
         if (
             // Petrols
             (pslower === "globus" || pslower === "omv")     // Globus + OMV
@@ -151,7 +156,10 @@ abstract class WebCrawler {
                 && (ftlower.includes("natural")) ||
             
             pslower === "mol"                               // MOL (*)
-                && ftlower.includes("benzin")
+                && ftlower.includes("benzin") ||
+
+            pslower === "makro"                             // Makro
+                && (ftlower.includes("natural") || ftlower.includes("drive") && !ftlower.includes("diesel") )
 
             //----------------------------------------- No data
             // Prim (**)
@@ -159,8 +167,9 @@ abstract class WebCrawler {
 
         if (
             // Diesels
-            (pslower === "globus" || pslower === "orlen" || pslower === "eurooil" || pslower === "mol" || pslower === "omv")
-                && ftlower.includes("diesel") ||            // Globus + Orlen + EuroOil + MOL (*) + OMV
+            (pslower === "globus" || pslower === "orlen" || pslower === "eurooil" || pslower === "mol" ||
+                pslower === "omv" || pslower === "makro")
+                && ftlower.includes("diesel") ||            // Globus + Orlen + EuroOil + MOL (*) + OMV + Makro
             
             pslower === "shell"                             // Shell
                 && ftlower.startsWith("nafta") ||
@@ -205,7 +214,7 @@ abstract class WebCrawler {
         ) return "ADBLUE";
 
         if (
-            // Windscreen
+            // Windscreen Cleaner
             ftlower.includes("kapalina do ostřikovačů")         // Globus
 
             //----------------------------------------- No data
@@ -221,6 +230,29 @@ abstract class WebCrawler {
         //
         // (**)     No data for "Prim" petrol stations are provided, since their website doesn't provide
         //          any price data. The same applies to "EuroOil" and "MOL" as well.
+    }
+
+    public static convertFileName(name: string): string {
+        // Convert the name to lowercase
+        let lowerName = name.toLowerCase();
+
+        // Replace diacritics with their ASCII equivalents
+        lowerName = lowerName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        // Replace spaces with hyphens
+        lowerName = lowerName.replace(/\s+/g, "-");
+        
+        // Remove all non-alphanumeric characters except hyphens
+        lowerName = lowerName.replace(/[^a-z0-9-]/g, "");
+
+        // Remove multiple consecutive hyphens
+        lowerName = lowerName.replace(/-+/g, "-");
+
+        // Trim hyphens from the start and end
+        lowerName = lowerName.replace(/^-|-$/g, "");
+
+        // Return the converted name
+        return lowerName;
     }
 }
 

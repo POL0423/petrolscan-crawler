@@ -60,8 +60,6 @@ class ONOCrawler extends WebCrawler {
                 }
             ],
             requestHandler: async ({ page }) => {
-                const timezone = moment.tz.guess();     // Get local timezone
-
                 // Crawling logic
                 //-------------------------------------------------------------
 
@@ -288,8 +286,10 @@ class ONOCrawler extends WebCrawler {
                                 fuelData.push(locationData);
                             } catch (error) {
                                 thisObj.printMessage(`Error processing location ${station.location}: ${error}`, "ERROR");
+
+                                // Take a screenshot of the error
                                 await newPage.screenshot({
-                                    path: `error-${station.location.toLowerCase().replace(/[ -]+/g, "-")}.png`
+                                    path: `screenshots/error-ono-${WebCrawler.convertFileName(station.location)}.png`
                                 });
                             } finally {
                                 // Always close the browser

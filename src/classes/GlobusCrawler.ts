@@ -343,7 +343,9 @@ class GlobusCrawler extends WebCrawler {
                                 
                             } catch (error) {
                                 thisObj.printMessage(`Error processing location ${location.name}: ${error}`, "ERROR");
-                                await newPage.screenshot({ path: `error-${location.value}.png` });
+                                await newPage.screenshot({
+                                    path: `screenshots/error-globus-${WebCrawler.convertFileName(location.value)}.png`
+                                });
                             } finally {
                                 // Always close the browser
                                 await newContext.close();

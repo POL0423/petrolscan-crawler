@@ -8,26 +8,22 @@
  * 
  * @see https://crawlee.dev
  * 
- * File: src/types/LocationData.ts
+ * File: src/types/StationLinks.ts
  */
 
 // Imports
 //-------------------------------------------------
-
-// Local imports
-import FuelData from './FuelData.js';
+import { Locator } from "playwright-core";
 
 // Logic
 //-------------------------------------------------
 
-type LocationData = {
-    stationName: string;
-    location: string;
-    coordinates?: {
-        latitude: number;
-        longitude: number;
-    };
-    fuels: FuelData[];
+type MakroStoreLocator = {
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    href: string;
 }
 
-export default LocationData;
+export default MakroStoreLocator;
