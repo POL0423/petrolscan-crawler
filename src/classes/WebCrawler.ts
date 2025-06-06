@@ -59,7 +59,7 @@ abstract class WebCrawler {
             .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
         else
             console.warn(`[${moment().tz(moment.tz.guess())
-            .format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Wrong message type: '${type}' for message: '${message}'`);
+            .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] Wrong message type: '${type}' for message: '${message}'`);
     }
 
     public abstract start(): Promise<void>;

@@ -265,6 +265,16 @@ class MakroCrawler extends WebCrawler {
                 } catch (error) {
                     thisObj.printMessage(`\x1b[31;1mError in ${thisObj.getName()} crawler: ${error}\x1b[0m`, "ERROR");
                 }
+
+                //------------------------------------------------------------------
+                // Makro decided to block any automated scripts, even though
+                // they're done from a webbrowser. That means that the crawler
+                // will not be able to extract any data from the website.
+                // There's no point in running this crawler anymore. Makro is
+                // therefore removed from the list of crawlers.
+                //------------------------------------------------------------------
+                thisObj.printMessage(`\x1b[31;1mThis crawler is no longer functional due to website changes.\x1b[0m`, "ERROR");
+                thisObj.printMessage(`\x1b[31;1mPlease remove it from the list of crawlers.\x1b[0m`, "ERROR");
                 
                 // Save the page details
                 Dataset.pushData({
