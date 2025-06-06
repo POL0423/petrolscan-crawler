@@ -55,7 +55,7 @@ esac
 
 # Print start job
 echo -e "$(date +"[%F %T %Z]") [Service] Crawlers started."
-npm run start:prod $($MODE)
+npm run start:prod $MODE
 
 # Resolve termination or successful finish
 if [ $? -eq 0 ]
