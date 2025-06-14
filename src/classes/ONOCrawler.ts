@@ -470,9 +470,10 @@ class ONOCrawler extends WebCrawler {
             // Get the digit of the price
             let price_digit = digits[i];
 
-            // Determine the digit
+            // Check for the decimal point
             if (i === 3) price_str += ".";
 
+            // Determine the digit value
             if (price_digit.includes('0')) price_str += "0";
             if (price_digit.includes('1')) price_str += "1";
             if (price_digit.includes('2')) price_str += "2";
