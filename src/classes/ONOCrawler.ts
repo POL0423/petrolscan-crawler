@@ -47,7 +47,7 @@ class ONOCrawler extends WebCrawler {
         const crawler = new PlaywrightCrawler({
             // Timeouts
             navigationTimeoutSecs: 180,         // navigation timeout of ........... 3 minutes
-            requestHandlerTimeoutSecs: 600,     // request handler timeout of ..... 10 minutes
+            requestHandlerTimeoutSecs: 900,     // request handler timeout of ..... 15 minutes
             maxRequestRetries: 3,
             // Headers
             preNavigationHooks: [
@@ -168,6 +168,7 @@ class ONOCrawler extends WebCrawler {
                                 // Valid fuel names and digits values
                                 const valid_fuel_names = [
                                     "../images/n95c.gif",
+                                    "../images/n95pc.gif",
                                     "../images/n98c.gif",
                                     "../images/dc.gif",
                                     "../images/dpc.gif",
@@ -316,113 +317,7 @@ class ONOCrawler extends WebCrawler {
                     });
 
                     // Log into database
-                    for (const data of fuelData) {
-                        // Get station name and fuels
-                        let stationName = data.stationName;
-                        let fuels = data.fuels;
-
-                        // Get location GPS coordinates
-                        // Data source: https://openstreetmap.org/
-                        // Data license: Open Database License (ODbL) https://opendatacommons.org/licenses/odbl/
-                        let searchTerm = data.stationName.replace(/ +/g, '+');
-                        let osmData = await fetch(`https://nominatim.openstreetmap.org/search?q=${searchTerm}&format=json`)
-                            .then(response => response.json());
-
-                        // Declare variables, preload with NaN
-                        let osmLat = NaN, osmLon = NaN;
-
-                        // Prepare failure flag
-                        let fail = false;
-
-                        // Check if OSM data is an array
-                        let isArray = Array.isArray(osmData);
-                        if(!isArray) {
-                            // Print error
-                            thisObj.printMessage(`Returned data for ${data.location
-                                } is not an array. Using Null Island coordinates.`, "ERROR");
-                            
-                            // Set coordinates to (0, 0)
-                            osmLat = 0;
-                            osmLon = 0;
-
-                            // Set failure flag
-                            fail = true;
-                        }
-                        
-                        // Check for petrol station coordinates
-                        if(!fail) osmData.forEach((element: any) => {
-                            // Check fuel location
-                            if (element.type && (
-                                element.type === "fuel" ||
-                                element.type === "yes" ||       // ???      = I have no idea who put this in OSM data
-                                element.type === "alcohol"      // WTF????  = I have no idea who put this in OSM data
-                            )) {
-                                osmLat = Number.parseFloat(element.lat);
-                                osmLon = Number.parseFloat(element.lon);
-                            }
-                        });
-
-                        // Check if coordinates were found
-                        if (Number.isNaN(osmLat) || Number.isNaN(osmLon)) {
-                            // Print error
-                            thisObj.printMessage(`Failed to find fuel station location coordinates for ${
-                                data.location}. Using Null Island coordinates.`, "ERROR");
-                            
-                            // Set coordinates to (0, 0)
-                            osmLat = 0;
-                            osmLon = 0;
-
-                            // Set failure flag
-                            fail = true;
-                        }
-
-                        // Create location object
-                        let location: Location = {
-                            name: data.location,
-                            lat: osmLat,
-                            lon: osmLon
-                        };
-    
-                        // Iterate over the fuels and log them into database
-                        for (const fuel of fuels) {
-                            // Get fuel name and price
-                            let fuelName = fuel.name;
-                            let fuelPrice = fuel.price;
-
-                            // Get fuel type and quality
-                            let fuelType = WebCrawler.resolveFuelType('ono', fuelName);
-                            let fuelQuality = WebCrawler.resolveFuelQuality('ono', fuelName);
-
-                            // Debug
-                            thisObj.printMessage(`Collected data`, "DEBUG");
-                            thisObj.printMessage(`    Station name: .... ${stationName}`, "DEBUG");
-                            thisObj.printMessage(`    Location: ........ ${location.name}`, "DEBUG");
-                            thisObj.printMessage(`    GPS coords: ...... ${location.lat}, ${location.lon}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel name: ....... ${fuelName}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel type: ....... ${fuelType ?? "N/A"}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel quality: .... ${fuelQuality ?? "N/A"}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel price: ...... ${fuelPrice.toFixed(2)} CZK`, "DEBUG");
-
-                            // Create database data object
-                            let logData: DBData = {
-                                StationName: thisObj.getName(),
-                                StationLocation: location,
-                                FuelName: fuelName,
-                                FuelType: fuelType,
-                                FuelQuality: fuelQuality,
-                                FuelPrice: fuelPrice
-                            };
-
-                            // Check if data are updated
-                            let updated = await thisObj.getLogger().checkUpdates(logData);
-    
-                            // Log data into database if updated
-                            if (updated) thisObj.getLogger().log(logData);
-
-                            // Pause for a moment to avoid rate limiting
-                            await new Promise(resolve => setTimeout(resolve, 1500));
-                        }
-                    }
+                    await thisObj.writeToDB('ono', fuelData);
                 } catch (error) {
                     thisObj.printMessage(`\x1b[31;1mError in ${thisObj.getName()} crawler: ${error}\x1b[0m`, "ERROR");
                 }
@@ -442,7 +337,9 @@ class ONOCrawler extends WebCrawler {
 
         // Convert img src to fuel name
         if (name.includes('n95c')) return "Natural 95";
+        if (name.includes('n95pc')) return "Natural 95+";
         if (name.includes('n98c')) return "Natural 98";
+        if (name.includes('n98pc')) return "Natural 98+";
         if (name.includes('dc')) return "Diesel";
         if (name.includes('dpc')) return "Diesel+";
         if (name.includes('lpgc')) return "LPG";
@@ -464,14 +361,18 @@ class ONOCrawler extends WebCrawler {
         // Split the digits
         let digits = price.split("|");
 
-        // Create string builder
-        let price_str = "";
+        // Create string builder and decimal point counter
+        let price_str = "", decimal_counter = 0;
         for (let i = 0; i < digits.length; i++) {
             // Get the digit of the price
             let price_digit = digits[i];
 
             // Check for the decimal point
-            if (i === 3) price_str += ".";
+            if (price_digit.includes('/m')) {
+                // If the digit is a decimal point, increment the counter
+                decimal_counter++;
+                if (decimal_counter === 1) price_str += "."; // Add decimal point only once
+            }
 
             // Determine the digit value
             if (price_digit.includes('0')) price_str += "0";
@@ -488,6 +389,12 @@ class ONOCrawler extends WebCrawler {
 
         // Check if the price is empty => return 0
         if (price_str === ".") return 0;
+
+        // Check if the price begins with a decimal point
+        if (price_str.startsWith(".")) {
+            // Add a zero before the decimal point
+            price_str = "0" + price_str;
+        }
 
         // Return the price
         return parseFloat(price_str);

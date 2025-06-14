@@ -11,7 +11,8 @@
  * File: src/types/FuelQuality.ts
  */
 
-type FuelQuality =      "REGULAR" |         // Regular fuel (cheaper option)
+type FuelQuality =      "STANDARD" |        // Standard fuel (cheaper option)
+                        "MIDGRADE" |        // Mid-grade fuel (intermediate price option)
                         "PREMIUM" |         // Premium fuel (more expensive option)
                         "RACING" |          // Racing fuel (most expensive, provided by some petrol stations)
                         undefined;          // Unspecified quality (valid value, sometimes there's no other option)

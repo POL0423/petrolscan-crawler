@@ -46,7 +46,7 @@ class GlobusCrawler extends WebCrawler {
         const crawler = new PlaywrightCrawler({
             // Timeouts
             navigationTimeoutSecs: 180,         // navigation timeout of ........... 3 minutes
-            requestHandlerTimeoutSecs: 600,     // request handler timeout of ..... 10 minutes
+            requestHandlerTimeoutSecs: 900,     // request handler timeout of ..... 15 minutes
             maxRequestRetries: 3,
             // Headers
             preNavigationHooks: [
@@ -60,6 +60,10 @@ class GlobusCrawler extends WebCrawler {
             ],
             requestHandler: async ({ page }) => {
                 try {
+                    // Clear cookies before starting
+                    await page.context().clearCookies();
+                    thisObj.printMessage('Cookies cleared before starting the crawler');
+
                     // Step 1: Load the main page
                     await page.goto(thisObj.getUrl(), { waitUntil: 'networkidle' });
     
@@ -106,8 +110,8 @@ class GlobusCrawler extends WebCrawler {
                         return elements.map(el => {
                             const input = el.querySelector('input');
                             const label = el.querySelector('label');
-                            const label_main = el.querySelector('span.items-baseline > span.text-base');
-                            const label_sub = el.querySelector('span.items-baseline > span.text-xs');
+                            const label_main = label.querySelector('span.items-baseline > span.text-base');
+                            const label_sub = label.querySelector('span.items-baseline > span.text-xs');
                             let label_str = '';
                             if (label) {
                                 if (label_main) {
@@ -127,9 +131,6 @@ class GlobusCrawler extends WebCrawler {
     
                     thisObj.printMessage(`Found ${locations.length} locations.`);
     
-                    // Save locations to a structure
-                    const allLocations = [...locations];
-    
                     // Click outside the location dialog to close it
                     await page.click('div#__nuxt header#header').catch(_ => {
                         thisObj.printMessage('Failed to close location dialog by clicking header');
@@ -139,7 +140,7 @@ class GlobusCrawler extends WebCrawler {
                     const fuelData = [];
     
                     // Iterate through each location separately with new browser instances
-                    for (const location of allLocations) {
+                    for (const location of locations) {
                         // Create a new browser for each location
                         // That ensures clean state for each location processing
                         thisObj.printMessage(`Processing location: ${location.name} (${location.value})`);
@@ -151,6 +152,10 @@ class GlobusCrawler extends WebCrawler {
                             const newPage = await newContext.newPage();
                             
                             try {
+                                // Clear cookies before starting
+                                await newPage.context().clearCookies();
+                                thisObj.printMessage('Cookies cleared before processing location');
+                                
                                 // Navigate to the home page
                                 await newPage.goto(thisObj.getUrl(), { waitUntil: 'networkidle' });
                                 
@@ -176,8 +181,8 @@ class GlobusCrawler extends WebCrawler {
                                 
                                 // Verify that location selection dialog is visible, using an extended timeout
                                 thisObj.printMessage('Verifying location selection dialog is visible...');
-                                await newPage.waitForSelector('#input_9', { timeout: 20000 });
-                                
+                                await newPage.locator('#input_9').waitFor({ timeout: 20000 });
+
                                 // Wait for locations list to be fully loaded
                                 thisObj.printMessage('Waiting for locations list to be fully loaded...');
                                 await newPage.waitForFunction(() => {
@@ -203,13 +208,19 @@ class GlobusCrawler extends WebCrawler {
                                     }, locItemSelector);
                                     
                                     // Wait for the data to load
-                                    await newPage.waitForTimeout(2000);
+                                    await newPage.waitForFunction(async () => {
+                                        await new Promise(resolve => setTimeout(resolve, 1500));
+                                    }, { timeout: 10000 });
                                     
                                     // Verify the dialog is closed
-                                    const isDialogClosed = await newPage.locator('#input_9').isHidden()
+                                    const isLocationOpen = await newPage.locator('#teleport-target h2').first()
+                                        .isVisible()
                                         .catch(() => false);
                                     
-                                    if (isDialogClosed) {
+                                    // Log the state of the location dialog in debug mode
+                                    thisObj.printMessage(`Location dialog is ${isLocationOpen ? 'open' : 'closed'}`, "DEBUG");
+                                    
+                                    if (isLocationOpen) {
                                         locationSelected = true;
                                         thisObj.printMessage('Location selected using JavaScript click');
                                     }
@@ -224,16 +235,22 @@ class GlobusCrawler extends WebCrawler {
                                         await newPage.locator(locItemSelector).click({ force: true, timeout: 10000 });
                                         
                                         // Wait for the data to load
-                                        await newPage.waitForTimeout(2000);
+                                        await newPage.waitForFunction(async () => {
+                                            await new Promise(resolve => setTimeout(resolve, 1500));
+                                        }, { timeout: 10000 });
                                         
                                         // Verify the dialog is closed
-                                        const isDialogClosed = await newPage.locator('#input_9').isHidden()
+                                        const isLocationOpen = await newPage.locator('#teleport-target h2').first()
+                                            .isVisible()
                                             .catch(() => false);
+                                    
+                                        // Log the state of the location dialog in debug mode
+                                        thisObj.printMessage(`Location dialog is ${isLocationOpen ? 'open' : 'closed'}`, "DEBUG");
                                         
-                                        if (isDialogClosed) {
+                                        if (isLocationOpen) {
                                             locationSelected = true;
-                                            thisObj.printMessage('Location selected using force click');
-                                        }
+                                            thisObj.printMessage('Location selected using JavaScript click');
+                                        ;}
                                     } catch (e) {
                                         thisObj.printMessage('Force click failed, trying next method');
                                     }
@@ -257,22 +274,27 @@ class GlobusCrawler extends WebCrawler {
                                             
                                             // Check if the item text contains all location parts
                                             if (itemText && itemText.includes(locationNameParts[0])) {
-                                                if(!multipart || itemText.includes(locationNameParts[1]))
-                                                {
+                                                if(!multipart || itemText.includes(locationNameParts[1])) {
                                                     thisObj.printMessage(`Found matching location by text: "${itemText}"`);
                                                     await allLocationItems.nth(i).locator('label').click({ force: true });
 
                                                     // Wait for the data to load
-                                                    await newPage.waitForTimeout(2000);
+                                                    await newPage.waitForFunction(async () => {
+                                                        await new Promise(resolve => setTimeout(resolve, 1500));
+                                                    }, { timeout: 10000 });
 
                                                     // Verify the dialog is closed
-                                                    const isDialogClosed = await newPage.locator('#input_9').isHidden()
+                                                    const isLocationOpen = await newPage.locator('#teleport-target h2').first()
+                                                        .isVisible()
                                                         .catch(() => false);
-
-                                                    if (isDialogClosed) {
+                                    
+                                                    // Log the state of the location dialog in debug mode
+                                                    thisObj.printMessage(`Location dialog is ${isLocationOpen
+                                                        ? 'open' : 'closed'}`, "DEBUG");
+                                                    
+                                                    if (isLocationOpen) {
                                                         locationSelected = true;
-                                                        thisObj.printMessage('Location selected using text search');
-                                                        break;
+                                                        thisObj.printMessage('Location selected using JavaScript click');
                                                     }
                                                 }
                                             }
@@ -369,127 +391,7 @@ class GlobusCrawler extends WebCrawler {
                     });
 
                     // Log into database
-                    for (const data of fuelData) {
-                        // Get station name and fuels
-                        let stationName = data.stationName;
-                        let fuels = data.fuels;
-
-                        // Get location GPS coordinates
-                        // Data source: https://openstreetmap.org/
-                        // Data license: Open Database License (ODbL) https://opendatacommons.org/licenses/odbl/
-                        let searchTerm = data.location.split('-').slice(-1)[0].trim();
-                        let osmData = await fetch(`https://nominatim.openstreetmap.org/search?q=Globus+${searchTerm}&format=json`)
-                            .then(response => response.json());
-
-                        // Declare variables, preload with NaN
-                        let osmLat = NaN, osmLon = NaN;
-
-                        // Prepare failure flag
-                        let fail = false;
-
-                        // Check if OSM data is an array
-                        let isArray = Array.isArray(osmData);
-                        if(!isArray) {
-                            // Print error
-                            thisObj.printMessage(`Returned data for ${data.location
-                                } is not an array. Using Null Island coordinates.`, "ERROR");
-                            
-                            // Set coordinates to (0, 0)
-                            osmLat = 0;
-                            osmLon = 0;
-
-                            // Set failure flag
-                            fail = true;
-                        }
-                        
-                        // Check for petrol station coordinates
-                        if(!fail) osmData.forEach((element: any) => {
-                            // Check fuel location
-                            if (element.type && element.type === 'fuel') {
-                                osmLat = Number.parseFloat(element.lat);
-                                osmLon = Number.parseFloat(element.lon);
-                            }
-                        });
-
-                        // Check if coordinates were found
-                        if (Number.isNaN(osmLat) || Number.isNaN(osmLon)) {
-                            // Print error
-                            thisObj.printMessage(`Failed to find fuel station location coordinates for ${
-                                data.location}. Trying to use store coordinates.`, "ERROR");
-                            
-                            // Prepare found flag
-                            let found = false;
-
-                            // Iterate over OSM data again -> return first finding
-                            osmData.forEach((element: any) => {
-                                if (!found && element.type && element.type === 'supermarket') {
-                                    // Get coordinates
-                                    osmLat = Number.parseFloat(element.lat);
-                                    osmLon = Number.parseFloat(element.lon);
-
-                                    // Set found flag
-                                    found = true;
-                                }
-                            });
-
-                            if (!found) {
-                                // Print error
-                                thisObj.printMessage(`Failed to find store location coordinates for ${data.location
-                                    }. Using Null Island coordinates.`, "ERROR");
-                                
-                                // Set coordinates to (0, 0)
-                                osmLat = 0;
-                                osmLon = 0;
-                            }
-                        }
-
-                        // Create location object
-                        let location: Location = {
-                            name: data.location,
-                            lat: osmLat,
-                            lon: osmLon
-                        };
-    
-                        // Iterate over the fuels and log them into database
-                        for (const fuel of fuels) {
-                            // Get fuel name and price
-                            let fuelName = fuel.name;
-                            let fuelPrice = fuel.price;
-
-                            // Get fuel type and quality
-                            let fuelType = WebCrawler.resolveFuelType('globus', fuelName);
-                            let fuelQuality = WebCrawler.resolveFuelQuality('globus', fuelName);
-
-                            // Debug
-                            thisObj.printMessage(`Collected data`, "DEBUG");
-                            thisObj.printMessage(`    Station name: .... ${stationName}`, "DEBUG");
-                            thisObj.printMessage(`    Location: ........ ${location.name}`, "DEBUG");
-                            thisObj.printMessage(`    GPS coords: ...... ${location.lat}, ${location.lon}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel name: ....... ${fuelName}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel type: ....... ${fuelType ?? "N/A"}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel quality: .... ${fuelQuality ?? "N/A"}`, "DEBUG");
-                            thisObj.printMessage(`    Fuel price: ...... ${fuelPrice.toFixed(2)} CZK`, "DEBUG");
-
-                            // Create database data object
-                            let logData: DBData = {
-                                StationName: thisObj.getName(),
-                                StationLocation: location,
-                                FuelName: fuelName,
-                                FuelType: fuelType,
-                                FuelQuality: fuelQuality,
-                                FuelPrice: fuelPrice
-                            };
-
-                            // Check if data are updated
-                            let updated = await thisObj.getLogger().checkUpdates(logData);
-    
-                            // Log data into database if updated
-                            if (updated) thisObj.getLogger().log(logData);
-
-                            // Pause for a moment to avoid rate limiting
-                            await new Promise(resolve => setTimeout(resolve, 1500));
-                        }
-                    }
+                    await thisObj.writeToDB('globus', fuelData);
                 } catch (error) {
                     thisObj.printMessage(`\x1b[31;1mError in ${thisObj.getName()} crawler: ${error}\x1b[0m`, "ERROR");
                 }
