@@ -150,7 +150,8 @@ class ONOCrawler extends WebCrawler {
 
                                 // Get fuel rows
                                 let fuel_rows = await newPage
-                                    .locator("div#stojan > table tr:has(> td:nth-child(1) > img):has(> td:nth-child(2) > img)").all();
+                                    .locator("div#stojan > table tr:has(> td:nth-child(1) > img):has(> td:nth-child(2) > img)")
+                                    .all();
                                 
                                 // Create elements map
                                 let elements_map = [];
@@ -228,7 +229,7 @@ class ONOCrawler extends WebCrawler {
                                     }
 
                                     // Check if the name is valid
-                                    valid = name_src in valid_fuel_names;
+                                    valid = valid && name_src in valid_fuel_names;
 
                                     // Return the preset flag
                                     return valid;
