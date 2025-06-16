@@ -7,7 +7,8 @@
 # PetrolScan crawler
 # @author Marek Poláček (POL0423)
 # @version 0.0.1
-# @description Web crawler for my Bachelor Thesis assignment: Fuel Price Comparison App
+# @description Web crawler for my Bachelor Thesis
+#              assignment: Fuel Price Comparison App
 # @license MIT
 # @link https://github.com/pol0423/petrolscan-crawler
 #
