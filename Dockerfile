@@ -84,7 +84,8 @@ COPY . ./
 # Install Playwright browsers and dependencies
 RUN npx playwright install --with-deps chromium
 
-# Make cron job script executable
+# Make cron job and populate scripts executable
+RUN chmod +x scripts/populate.sh
 RUN chmod +x scripts/run_cron.sh
 
 # Add a cron job to schedule crawlers every day at 3:00am
