@@ -54,3 +54,17 @@ I am however planning to use this Bachelor Thesis project further for my own per
 so I'm keeping the data in for that, meaning I can then install additional modules when time isn't
 my enemy. These additional changes however are not going to be part of the original project,
 I'm going to fork the archive of this project to build upon it.
+
+## GitHub Copilot?
+
+Yes, I have used GitHub Copilot to generate the base skeleton for the Globus crawler, based on my input
+of the detailed actions needed to do to get access to each location's fuel data and the CSS selectors
+needed to find specific elements on the website page. It was quicker than reading detailed documentation,
+and I still needed to tweak stuff around, because generated code contained deprecated methods and didn't
+work straight away. It required a lot of interaction with he GitHub Copilot prompt as well as manually
+tweaking stuff based on the documentation to get it working. Since Globus changed slightly how certain
+features on their website works, I had to rewrite a portion of the crawler logic to accomodate for that
+change. Vibe Coding isn't just "generate the code and let it be". It requires a lot of input and interaction
+and to properly test the code. Despite requiring a lot of input, it still made it possible to finish
+the project quicker than with manual coding while looking into documentation. It at least left the room
+for tweaks and cosmetic touch ups.
