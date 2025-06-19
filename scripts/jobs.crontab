@@ -25,5 +25,5 @@
 #   --verbose               Outputs verbose logs
 #   --silly                 Outputs everything (including debugging information)
 # Flags are sorted from highest to lowest. Lower modes also output higher modes.
-# Any other flag will be ignored. Default mode is "--notice".
-0 1 * * * /app/scripts/run_cron.sh --silent &>> /var/log/cron.log
+# Any other flag will be ignored. Default mode is "--info".
+0   3   *   *   *   root    /app/scripts/run_cron.sh --silent &>> /var/log/cron.log

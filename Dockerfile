@@ -88,9 +88,12 @@ RUN npx playwright install --with-deps chromium
 RUN chmod +x scripts/populate.sh
 RUN chmod +x scripts/run_cron.sh
 
+# Change the local timezone to Europe/Prague
+RUN cp /usr/share/zoneinfo/CET /etc/localtime
+
 # Add a cron job to schedule crawlers every day at 3:00am
-RUN chmod 0644 scripts/jobs.crontab
-RUN crontab scripts/jobs.crontab
+COPY scripts/jobs.crontab /etc/cron.d/jobs.crontab
+RUN chmod 0644 /etc/cron.d/jobs.crontab
 RUN touch /var/log/cron.log
 
 # Run the image. We run the initial population script,

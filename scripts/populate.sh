@@ -23,7 +23,7 @@ cd /app
 
 # Print start job
 echo -e "$(date +"[%F %T %Z]") [Service] Database population started."
-npm run start:prod
+npm run start:prod --loglevel notice
 
 # Check if the command was successful
 if [ $? -ne 0 ]; then

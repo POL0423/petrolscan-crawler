@@ -110,7 +110,7 @@ class DBLogger {
             // Debug
             console.debug(`[${moment().tz(moment.tz.guess())
                 .format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Found ${rows.length} records.`);
-            console.debug('    Data:', rows);
+            console.debug('Data:', rows);
 
             // Check if there are any records
             if (rows.length === 0) {

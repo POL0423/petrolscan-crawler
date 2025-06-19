@@ -44,6 +44,8 @@ While analyzing websites of petrol stations, I decided to disable following craw
   nothing to process. Yes, the petrol stations listed do include information about provided services,
   including fuel pumps (not every station includes every type and quality of fuel), but not their
   prices. Not to mention that this website doesn't support HTTPS, which is a huge red flag nowadays.
+- **Makro:** This website implements advanced anti-scraping mechanisms that block any automated crawling
+  once it catches on. That thwarts any attempt to extract fuel prices information from the websites.
 
 ### What happens with disabled crawlers then?
 
