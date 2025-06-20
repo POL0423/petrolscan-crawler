@@ -50,6 +50,9 @@ ENV DB_USERNAME=${DB_USERNAME}
 ENV DB_PASSWORD=${DB_PASSWORD}
 ENV DB_DATABASE=${DB_DATABASE}
 
+# Environment variables for Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/node_modules/playwright-core/.local-browsers
+
 # Add cron to manage cron jobs
 RUN which apt || (echo "This image is not based on Debian/Ubuntu, cannot install cron." && exit 1)
 RUN apt-get update && apt-get install -y cron || (cat /var/log/apt/term.log || true)
@@ -82,6 +85,7 @@ RUN npm --quiet set progress=false \
 COPY . ./
 
 # Install Playwright browsers and dependencies
+RUN export PLAYWRIGHT_BROWSERS_PATH=/app/node_modules/playwright-core/.local-browsers
 RUN npx playwright install --with-deps chromium
 
 # Make cron job and populate scripts executable
@@ -92,10 +96,20 @@ RUN chmod +x scripts/run_cron.sh
 RUN cp /usr/share/zoneinfo/CET /etc/localtime
 
 # Add a cron job to schedule crawlers every day at 3:00am
-COPY scripts/jobs.crontab /etc/cron.d/jobs.crontab
-RUN chmod 0644 /etc/cron.d/jobs.crontab
+COPY scripts/cronjobs /etc/cron.d/cronjobs
+RUN chmod 0644 /etc/cron.d/cronjobs
+RUN mkdir -p /var/log
 RUN touch /var/log/cron.log
+RUN touch /var/log/populate.log
+
+# Create volume mount points for the dataset and screenshots
+RUN mkdir -p /app/storage
+RUN mkdir -p /app/screenshots
+
+# Add the entrypoint script to run the crawler
+COPY scripts/docker_entry.sh /docker_entry.sh
+RUN chmod +x /docker_entry.sh
 
 # Run the image. We run the initial population script,
 # then cron and display logs
-CMD ["sh", "-c", "./scripts/populate.sh | tee /var/log/populate.log && cron && tail -f /var/log/cron.log"]
+CMD ["/docker_entry.sh"]

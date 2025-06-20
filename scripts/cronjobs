@@ -1,3 +1,9 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/app/node_modules/.bin
+HOME=/root
+PLAYWRIGHT_BROWSERS_PATH=/app/node_modules/playwright-core/.local-browsers
+0 3 * * * root export $(cat /etc/cron.env | xargs); /app/scripts/run_cron.sh --silent >> /var/log/cron.log 2>&1
+
 ###################################################
 # Crontab for my crawlers
 #--------------------------------------------------
@@ -26,4 +32,3 @@
 #   --silly                 Outputs everything (including debugging information)
 # Flags are sorted from highest to lowest. Lower modes also output higher modes.
 # Any other flag will be ignored. Default mode is "--info".
-0   3   *   *   *   root    /app/scripts/run_cron.sh --silent &>> /var/log/cron.log
