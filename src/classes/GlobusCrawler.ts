@@ -364,9 +364,12 @@ class GlobusCrawler extends WebCrawler {
                                 fuelData.push(locationData);
                                 
                             } catch (error) {
+                                let errorDate = moment().tz("UTC").toDate().toISOString();
                                 thisObj.printMessage(`Error processing location ${location.name}: ${error}`, "ERROR");
+
+                                // Take a screenshot of the error
                                 await newPage.screenshot({
-                                    path: `screenshots/error-globus-${WebCrawler.convertFileName(location.value)}.png`
+                                    path: `screenshots/${errorDate}/error-globus-${WebCrawler.convertFileName(location.value)}.png`
                                 });
                             } finally {
                                 // Always close the browser

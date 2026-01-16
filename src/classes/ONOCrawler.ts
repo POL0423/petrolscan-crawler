@@ -287,11 +287,12 @@ class ONOCrawler extends WebCrawler {
                                 // Add location data to collection
                                 fuelData.push(locationData);
                             } catch (error) {
+                                let errorDate = moment().tz("UTC").toDate().toISOString();
                                 thisObj.printMessage(`Error processing location ${station.location}: ${error}`, "ERROR");
 
                                 // Take a screenshot of the error
                                 await newPage.screenshot({
-                                    path: `screenshots/error-ono-${WebCrawler.convertFileName(station.location)}.png`
+                                    path: `screenshots/${errorDate}/error-ono-${WebCrawler.convertFileName(station.location)}.png`
                                 });
                             } finally {
                                 // Always close the browser

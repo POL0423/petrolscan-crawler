@@ -49,20 +49,22 @@ abstract class WebCrawler {
     }
 
     public printMessage(message: string, type: MessageType = "LOG"): void {
+        let localTZ = moment.tz.guess(true);
+
         if (type === "LOG")
-            console.log(`[${moment().tz(moment.tz.guess())
+            console.log(`[${moment().tz(localTZ)
                 .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
         else if (type === "DEBUG")
-            console.debug(`[${moment().tz(moment.tz.guess())
+            console.debug(`[${moment().tz(localTZ)
                 .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
         else if (type === "ERROR")
-            console.error(`[${moment().tz(moment.tz.guess())
+            console.error(`[${moment().tz(localTZ)
                 .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
         else if (type === "WARN")
-            console.warn(`[${moment().tz(moment.tz.guess())
+            console.warn(`[${moment().tz(localTZ)
                 .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] ${message}`);
         else
-            console.warn(`[${moment().tz(moment.tz.guess())
+            console.warn(`[${moment().tz(localTZ)
                 .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] Wrong message type: '${type}' for message: '${message}'`);
     }
 
