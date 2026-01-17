@@ -287,7 +287,7 @@ class ONOCrawler extends WebCrawler {
                                 // Add location data to collection
                                 fuelData.push(locationData);
                             } catch (error) {
-                                let errorDate = moment().tz("UTC").toDate().toISOString();
+                                let errorDate = moment().tz("UTC").toDate().toISOString().slice(0, 10);     // YYYY-MM-DD
                                 thisObj.printMessage(`Error processing location ${station.location}: ${error}`, "ERROR");
 
                                 // Take a screenshot of the error
