@@ -35,6 +35,9 @@ if (process.argv.length > 2) {
     }
 }
 
+// Debug mode
+const debugMode: boolean = process.argv.includes('debug');
+
 // Scraping logic
 //-------------------------------------------------
 const timezone = moment.tz.guess();     // Get local timezone
@@ -51,7 +54,7 @@ if(crawlerToStart === 'globus' || crawlerToStart === 'all')     await globus.sta
 if(crawlerToStart === 'ono' || crawlerToStart === 'all')        await ono.start();
 
 // Debug mode
-if (process.argv.length > 2 && process.argv[2] === "debug") {
+if (debugMode) {
     // Retrieve data for verification
     console.log(`[${moment().tz(timezone)
         .format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Retrieving data from database for verification...`);
