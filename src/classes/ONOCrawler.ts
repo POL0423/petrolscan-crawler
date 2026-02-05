@@ -23,10 +23,8 @@ import moment from 'moment-timezone';
 import DBLogger from './DBLogger.js';
 import WebCrawler from "./WebCrawler.js";
 import StationLinks from '../types/StationLinks.js';
-import Location from '../types/Location.js';
 import FuelData from '../types/FuelData.js';
 import LocationData from '../types/LocationData.js';
-import DBData from '../types/DBData.js';
 
 // Logic
 //-------------------------------------------------
@@ -111,42 +109,13 @@ class ONOCrawler extends WebCrawler {
                                 await newPage.goto(thisObj.getUrl() + station.href, { waitUntil: 'networkidle' });
 
                                 // Find full name of the petrol station
+                                // Trim unnecessary parts
                                 const full_name_locator = newPage.locator('div#nadpis');
                                 let full_name = await full_name_locator.textContent();
-                                full_name = full_name?.replace(/ +/g, " ").trim() || "Unknown";
+                                full_name = full_name?.replace(/ +/g, " ").replace('Tank ONO s.r.o. - ČS', '').trim() || null;
         
                                 // Get station location name
                                 let station_location = station.location;
-                                let changed = false;
-        
-                                // Check if the name contains "exit" to trim it
-                                if (station_location.toLowerCase().includes("exit")) {
-                                    station_location = station_location
-                                    .replace(/ *[,-] +D[0-9]+ +exit +[0-9]+/g, "").trim();
-                                    changed = true;
-                                }
-                                
-                                // Replace "ONO I" and "ONO II" with "1" or "2"
-                                if (station_location.toLowerCase().endsWith("ono i")) {
-                                    station_location = station_location.replace("ONO I", "1");
-                                    changed = true;
-                                }
-                                if (station_location.toLowerCase().endsWith("ono ii")) {
-                                    station_location = station_location.replace("ONO II", "2");
-                                    changed = true;
-                                }
-
-                                // Trim "u Kroměříže" as it doesn't work
-                                if (station_location.toLowerCase().includes("u kroměříže")) {
-                                    station_location = station_location.replace(" u Kroměříže", "");
-                                    changed = true;
-                                }
-
-                                // Debug info: print changed location
-                                if (changed) {
-                                    thisObj.printMessage(`Location changed from '${station.location
-                                        }' to '${station_location}' for GPS query purposes`, "DEBUG");
-                                }
 
                                 // Get fuel rows
                                 let fuel_rows = await newPage

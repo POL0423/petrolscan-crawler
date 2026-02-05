@@ -22,6 +22,7 @@ import LocationData from '../types/LocationData.js';
 import Location from '../types/Location.js';
 import DBData from '../types/DBData.js';
 import StationStr from '../types/StationStr.js';
+import { OSMSearchResult, OSMTypePriority, SearchTermConfig } from '../types/OSMTypes.js';
 
 abstract class WebCrawler {
     private name: string;
@@ -68,6 +69,160 @@ abstract class WebCrawler {
                 .format("YYYY-MM-DD HH:mm:ss zz")}] [${this.name} crawler] Wrong message type: '${type}' for message: '${message}'`);
     }
 
+    // OSM type priorities - lower number = higher priority
+    private static readonly OSM_TYPE_PRIORITIES: OSMTypePriority[] = [
+        { class: 'amenity', type: 'fuel', priority: 1 },      // Fuel station - highest priority
+        { class: 'amenity', type: 'car_wash', priority: 2 },  // Car wash - fallback 1
+        { class: 'shop', type: 'yes', priority: 3 }           // Shop - fallback 2
+    ];
+
+    /**
+     * Gets priority for a given class/type combination
+     */
+    private static getTypePriority(osmClass: string, osmType: string): number | null {
+        const found = WebCrawler.OSM_TYPE_PRIORITIES.find(
+            p => p.class === osmClass && p.type === osmType
+        );
+        return found ? found.priority : null;
+    }
+
+    /**
+     * Selects the best location from OSM results based on type priority
+     */
+    private static selectBestOSMLocation(
+        osmResults: OSMSearchResult[],
+        nameFilter?: string,
+        displayNameFilter?: string
+    ): OSMSearchResult | null {
+        let filteredResults = osmResults;
+
+        // Apply display_name filter first if provided (e.g., for Cheb -> Odrava)
+        if (displayNameFilter) {
+            const normalizedFilter = displayNameFilter.toLowerCase();
+            filteredResults = osmResults.filter(result =>
+                result.display_name?.toLowerCase().includes(normalizedFilter)
+            );
+
+            // If display_name filter found nothing, use all results
+            if (filteredResults.length === 0) {
+                filteredResults = osmResults;
+            }
+        }
+
+        // Apply name filter if provided (for disambiguation like Dolní Dvořiště I/II)
+        if (nameFilter) {
+            const normalizedFilter = nameFilter.toLowerCase();
+            const nameFiltered = filteredResults.filter(result =>
+                result.name?.toLowerCase().includes(normalizedFilter)
+            );
+
+            // If name filter found something, use it; otherwise keep previous results
+            if (nameFiltered.length > 0) {
+                filteredResults = nameFiltered;
+            }
+        }
+
+        // Find result with highest priority (lowest number)
+        let bestResult: OSMSearchResult | null = null;
+        let bestPriority = Infinity;
+
+        for (const result of filteredResults) {
+            const priority = WebCrawler.getTypePriority(result.class, result.type);
+
+            if (priority !== null && priority < bestPriority) {
+                bestPriority = priority;
+                bestResult = result;
+            }
+        }
+
+        return bestResult;
+    }
+
+    /**
+     * Generates OSM search term for Globus stations
+     * Pattern: "Globus {shortened locality}"
+     */
+    private static generateGlobusSearchTerm(location: string): SearchTermConfig {
+        // Pattern for "X u Y" - extract X
+        const uPattern = /^(.+?)\s+u\s+/i;
+        const match = location.match(uPattern);
+
+        let searchLocation: string;
+        if (match) {
+            // "Chotíkov u Plzně" -> "Chotíkov"
+            searchLocation = match[1].trim();
+        } else {
+            // "Praha-Čakovice" or "Brno" -> use as is
+            searchLocation = location;
+        }
+
+        return {
+            searchTerm: `Globus+${searchLocation.replace(/ +/g, '+')}`
+        };
+    }
+
+    /**
+     * Generates OSM search term for ONO stations
+     * Pattern: "ONO {shortened locality}"
+     */
+    private static generateONOSearchTerm(location: string): SearchTermConfig {
+        let searchLocation = location;
+        let nameFilter: string | undefined;
+        let displayNameFilter: string | undefined;
+
+        // Pattern for "X - D# exit ###" - remove highway designations
+        const exitPattern = /\s*-\s*D\d+\s+exit\s+\d+/i;
+        searchLocation = searchLocation.replace(exitPattern, '');
+
+        // Pattern for "X - ONO I" or "X - ONO II" - special case Dolní Dvořiště
+        const onoNumberPattern = /^(.+?)\s*-\s*ONO\s+(I{1,2}|[12])$/i;
+        const onoMatch = location.match(onoNumberPattern);
+        if (onoMatch) {
+            searchLocation = onoMatch[1].trim();
+            // Map Roman numerals to Arabic for name filter
+            const numMap: Record<string, string> = { 'I': '1', 'II': '2', '1': '1', '2': '2' };
+            const num = numMap[onoMatch[2].toUpperCase()] || onoMatch[2];
+            nameFilter = `Tank Ono ${searchLocation} ${num}`;
+        }
+
+        // Pattern for "X u Y" - shorten (only if not already matched ONO pattern)
+        if (!onoMatch) {
+            const uPattern = /^(.+?)\s+u\s+/i;
+            const uMatch = searchLocation.match(uPattern);
+            if (uMatch) {
+                searchLocation = uMatch[1].trim();
+            }
+        }
+
+        // Special case: Cheb is actually Odrava (not Vojtanov which also appears in results)
+        if (searchLocation.toLowerCase() === 'cheb') {
+            displayNameFilter = 'Odrava';
+        }
+
+        return {
+            searchTerm: `ONO+${searchLocation.replace(/ +/g, '+')}`,
+            nameFilter: nameFilter,
+            displayNameFilter: displayNameFilter
+        };
+    }
+
+    /**
+     * Generates OSM search term based on station type
+     */
+    private static generateSearchTerm(station: StationStr, location: string): SearchTermConfig {
+        switch (station) {
+            case 'globus':
+                return WebCrawler.generateGlobusSearchTerm(location);
+            case 'ono':
+                return WebCrawler.generateONOSearchTerm(location);
+            default:
+                // Default behavior for other stations
+                return {
+                    searchTerm: location.replace(/ +/g, '+')
+                };
+        }
+    }
+
     public async writeToDB(station: StationStr, fuelData: LocationData[]): Promise<void> {
         for (const data of fuelData) {
             // Get station name and fuels
@@ -78,78 +233,69 @@ abstract class WebCrawler {
             // Data source: https://openstreetmap.org/
             // Data license: Open Database License (ODbL) https://opendatacommons.org/licenses/odbl/
 
-            let searchTerm, osmData;
+            // Generate search term based on station type
+            const searchConfig = WebCrawler.generateSearchTerm(station, data.location);
 
-            if (station === 'globus') {
-                searchTerm = data.location.split('-').slice(-1)[0].trim();
-                osmData = await fetch(`https://nominatim.openstreetmap.org/search?q=Globus+${searchTerm}&format=json`)
-                    .then(response => response.json());
-            } else {
-                searchTerm = data.stationName.replace(/ +/g, '+');
-                osmData = await fetch(`https://nominatim.openstreetmap.org/search?q=${searchTerm}&format=json`)
-                            .then(response => response.json());
+            // Fetch OSM data
+            let osmData: OSMSearchResult[];
+            try {
+                // Encode each part of the search term separately (preserving + as separator)
+                const encodedSearchTerm = searchConfig.searchTerm
+                    .split('+')
+                    .map(part => encodeURIComponent(part))
+                    .join('+');
+
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodedSearchTerm}&format=json`
+                );
+                osmData = await response.json();
+
+                // Respect Nominatim rate limit (max 1 request per second)
+                await new Promise(resolve => setTimeout(resolve, 1100));
+            } catch (error) {
+                this.printMessage(`Failed to fetch OSM data for ${data.location}: ${error}`, "ERROR");
+                osmData = [];
             }
 
-            // Declare variables, preload with NaN
+            // Declare coordinates with NaN defaults
             let osmLat = NaN, osmLon = NaN;
 
-            // Prepare failure flag
-            let fail = false;
-
-            // Check if OSM data is an array
-            let isArray = Array.isArray(osmData);
-            if (!isArray) {
-                // Print error
-                this.printMessage(`Returned data for ${data.location
-                    } is not an array. Using Null Island coordinates.`, "ERROR");
-
-                // Set coordinates to (0, 0)
+            // Check if OSM data is valid
+            if (!Array.isArray(osmData)) {
+                this.printMessage(
+                    `Returned data for ${data.location} is not an array. Using Null Island coordinates.`,
+                    "ERROR"
+                );
                 osmLat = 0;
                 osmLon = 0;
+            } else if (osmData.length === 0) {
+                this.printMessage(
+                    `No OSM results for ${data.location} (search: ${searchConfig.searchTerm}). Using Null Island coordinates.`,
+                    "ERROR"
+                );
+                osmLat = 0;
+                osmLon = 0;
+            } else {
+                // Select best location based on priority (fuel > car_wash > shop)
+                const bestLocation = WebCrawler.selectBestOSMLocation(
+                    osmData,
+                    searchConfig.nameFilter,
+                    searchConfig.displayNameFilter
+                );
 
-                // Set failure flag
-                fail = true;
-            }
-                        
-            // Check for petrol station coordinates
-            if(!fail) osmData.forEach((element: any) => {
-                // Check fuel location
-                if (element.type && (
-                    element.type === "fuel" ||
-                    element.type === "yes" ||       // ???      = I have no idea who put this in OSM data
-                    element.type === "alcohol"      // WTF????  = I have no idea who put this in OSM data
-                )) {
-                    osmLat = Number.parseFloat(element.lat);
-                    osmLon = Number.parseFloat(element.lon);
-                }
-            });
+                if (bestLocation) {
+                    osmLat = Number.parseFloat(bestLocation.lat);
+                    osmLon = Number.parseFloat(bestLocation.lon);
 
-            // Check if coordinates were found
-            if (Number.isNaN(osmLat) || Number.isNaN(osmLon)) {
-                // Print error
-                this.printMessage(`Failed to find fuel station location coordinates for ${data.location}. Trying to use store coordinates.`, "ERROR");
-
-                // Prepare found flag
-                let found = false;
-
-                // Iterate over OSM data again -> return first finding
-                osmData.forEach((element: any) => {
-                    if (!found && element.type && element.type === 'supermarket') {
-                        // Get coordinates
-                        osmLat = Number.parseFloat(element.lat);
-                        osmLon = Number.parseFloat(element.lon);
-
-                        // Set found flag
-                        found = true;
-                    }
-                });
-
-                if (!found) {
-                    // Print error
-                    this.printMessage(`Failed to find store location coordinates for ${data.location
-                        }. Using Null Island coordinates.`, "ERROR");
-
-                    // Set coordinates to (0, 0)
+                    this.printMessage(
+                        `Found ${bestLocation.class}/${bestLocation.type} for ${data.location}`,
+                        "DEBUG"
+                    );
+                } else {
+                    this.printMessage(
+                        `No matching location type found for ${data.location}. Using Null Island coordinates.`,
+                        "ERROR"
+                    );
                     osmLat = 0;
                     osmLon = 0;
                 }

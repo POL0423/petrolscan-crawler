@@ -16,16 +16,13 @@
 
 // Global imports
 import { PlaywrightCrawler, Dataset } from 'crawlee';
-import { chromium } from 'playwright';
 import moment from 'moment-timezone';
 
 // Local imports
 import DBLogger from './DBLogger.js';
 import WebCrawler from "./WebCrawler.js";
-import DBData from '../types/DBData.js';
 import FuelData from '../types/FuelData.js';
 import LocationData from '../types/LocationData.js';
-import Location from '../types/Location.js';
 
 // Logic
 //-------------------------------------------------

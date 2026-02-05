@@ -53,9 +53,9 @@ ENV DB_DATABASE=${DB_DATABASE}
 # Environment variables for Playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/node_modules/playwright-core/.local-browsers
 
-# Add cron to manage cron jobs
+# Add cron and tzdata for timezone support
 RUN which apt || (echo "This image is not based on Debian/Ubuntu, cannot install cron." && exit 1)
-RUN apt-get update && apt-get install -y cron || (cat /var/log/apt/term.log || true)
+RUN apt-get update && apt-get install -y cron tzdata || (cat /var/log/apt/term.log || true)
 
 # Set working directory
 WORKDIR /app
@@ -93,7 +93,8 @@ RUN chmod +x scripts/populate.sh
 RUN chmod +x scripts/run_cron.sh
 
 # Change the local timezone to Europe/Prague
-RUN cp /usr/share/zoneinfo/CET /etc/localtime
+RUN cp /usr/share/zoneinfo/Europe/Prague /etc/localtime && \
+    echo "Europe/Prague" > /etc/timezone
 
 # Add a cron job to schedule crawlers every day at 3:00am
 COPY scripts/cronjobs /etc/cron.d/cronjobs
