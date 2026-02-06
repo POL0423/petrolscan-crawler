@@ -9,9 +9,26 @@ fuel price data off them. No permission was given, some of them may have an offi
 but I can't afford to pay for an API access, so scraping it is. It may be frowned upon, but it's not illegal
 per say to use scraped data for a simple comparison, especially if there's no profit in running the app.
 
-## Coming soon
+## Update 2026-02-06
 
-Stay tuned for future updates.
+I've finally fixed the crawlers. Most notably Globus has completely stopped working due to recent website
+overhaul, which meant rewriting a substantial portion of the scraping logic to accomodate for the new design.
+Furthermore, I've decided to go ahead and fix an issue with null coordinates for some locations that couldn't
+be found via OpenStreetMap Nomimatim API.
+
+The list of changes made for this update is as follows:
+
+- d87b2c6 Node Packages Update
+- c205fd2 Minor logging tweaks + Added date directory for error screenshots + Optimized message logging format to use a variable
+- 065d5af Trimming the ISO date&time to just the date part
+- fc3691f Fixed new TSconfig error - missing "rootDir" directive
+- 07e1a63 Dev mode: command line argument to start a specific crawler + [arg 1]: crawler to start   (globus|ono|all) => default: 'all'   case insensitive
+- b176229 Dev command line arguments + [arg 0]: crawler to start   (globus|ono|all), case insensitive   default = all + [arg 1-n]: debug mode   if present, makes database dump at the end
+- 5710cc6 Updates and vulnerability fixes
+- f0f462b Further updates and vulnerability fixes (including a severe one)
+- b9ab5c4 Crawler fixed using Claude Opus. - Implemented new logic for a new website design - Fixed issues with timeouts and screenshots
+- cbfeea2 Fixed database logging for both crawlers with Claude Opus: + Fixed the robustness of OpenStreetMap API search + Added logic for search term adjustment for both Globus and ONO + Adjusted Dockerfile for underlying image changes
+- d6a46a2 Fixed Docker image bug - Unwanted pollution by an old test build   Fixed by adding the `dist/` directory into the `.dockerignore` file.
 
 ## Enabled crawlers
 

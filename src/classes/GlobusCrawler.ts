@@ -16,16 +16,13 @@
 
 // Global imports
 import { PlaywrightCrawler, Dataset } from 'crawlee';
-import { chromium } from 'playwright';
 import moment from 'moment-timezone';
 
 // Local imports
 import DBLogger from './DBLogger.js';
 import WebCrawler from "./WebCrawler.js";
-import DBData from '../types/DBData.js';
 import FuelData from '../types/FuelData.js';
 import LocationData from '../types/LocationData.js';
-import Location from '../types/Location.js';
 
 // Logic
 //-------------------------------------------------
@@ -48,9 +45,12 @@ class GlobusCrawler extends WebCrawler {
             navigationTimeoutSecs: 180,         // navigation timeout of ........... 3 minutes
             requestHandlerTimeoutSecs: 900,     // request handler timeout of ..... 15 minutes
             maxRequestRetries: 3,
-            // Headers
+            // Headers and viewport
             preNavigationHooks: [
                 async ({ page }) => {
+                    // Set viewport to full HD resolution to avoid mobile layout
+                    await page.setViewportSize({ width: 1920, height: 1080 });
+
                     // Set real user agent of Google Chrome browser
                     await page.setExtraHTTPHeaders({
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -66,7 +66,7 @@ class GlobusCrawler extends WebCrawler {
 
                     // Step 1: Load the main page
                     await page.goto(thisObj.getUrl(), { waitUntil: 'networkidle' });
-    
+
                     // Step 2: Handle cookie consent if present
                     const cookieConsentBtn = page.locator('button#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
                     try {
@@ -77,304 +77,112 @@ class GlobusCrawler extends WebCrawler {
                     } catch (_) {
                         thisObj.printMessage('No cookie consent dialog found or acceptance failed');
                     }
-    
-                    // Step 3: Click on "Vybrat pobočku" button
-                    const selectLocationBtn = page.locator('div#__nuxt header#header button.btn-lg');
-                    await selectLocationBtn.waitFor({ timeout: 30000 });
-                    await selectLocationBtn.click({ force: true });
-                    await page.waitForLoadState('networkidle');
-    
-                    // Dynamically wait for location dropdown
-                    thisObj.printMessage('Waiting for location dropdown to appear...');
-                    await page.waitForSelector('#input_9', { timeout: 30000 })
-                        .catch(async _ => {
-                            thisObj.printMessage('Failed to find location selector, trying alternative approach...');
-                            // Zkusíme kliknout znovu na tlačítko
-                            await selectLocationBtn.click({ force: true });
-                            await page.waitForLoadState('networkidle');
-                            await page.waitForSelector('#input_9', { timeout: 30000 });
+
+                    // Step 3: Find "Vybrat hypermarket" button by text
+                    thisObj.printMessage('Looking for "Vybrat hypermarket" button...');
+                    const selectHypermarketBtn = page.getByRole('button', { name: /vybrat hypermarket/i });
+                    try {
+                        await selectHypermarketBtn.waitFor({ timeout: 30000 });
+                    } catch (btnError) {
+                        // Take screenshot on timeout
+                        const errorDate = moment().tz("UTC").toDate().toISOString().slice(0, 10);
+                        await page.screenshot({
+                            path: `screenshots/${errorDate}/error-globus-button-timeout.png`
                         });
-    
-                    // Step 4: Get all locations
+                        thisObj.printMessage(`Screenshot saved to screenshots/${errorDate}/error-globus-button-timeout.png`, "ERROR");
+                        throw btnError;
+                    }
+                    await selectHypermarketBtn.click({ force: true });
+                    await page.waitForLoadState('networkidle');
+
+                    // Step 4: Get all locations from header
                     thisObj.printMessage(`${this.getName()} crawler is collecting all available locations...`);
-    
-                    // Check if location items are loaded
-                    await page.waitForFunction(() => {
-                        const list = document.querySelector('#input_9 > ul');
-                        return list && list.children.length > 0;
-                    }, { timeout: 30000 }).catch(_ => {
-                        thisObj.printMessage('Timeout waiting for location items to load', "WARN");
+
+                    // Wait for location links to be visible
+                    await page.waitForSelector('#header div.max-md\\:hidden a', { timeout: 30000 });
+
+                    // Extract location names from individual links
+                    const locations = await page.locator('#header div.max-md\\:hidden a').evaluateAll((elements: any[]) => {
+                        return elements.map(el => ({
+                            name: el.textContent?.trim() || ''
+                        })).filter(loc => loc.name.length > 0);
                     });
-    
-                    const locations = await page.locator('#input_9 > ul > li').evaluateAll((elements: any[]) => {
-                        return elements.map(el => {
-                            const input = el.querySelector('input');
-                            const label = el.querySelector('label');
-                            const label_main = label.querySelector('span.items-baseline > span.text-base');
-                            const label_sub = label.querySelector('span.items-baseline > span.text-xs');
-                            let label_str = '';
-                            if (label) {
-                                if (label_main) {
-                                    label_str = label_main.textContent.trim();
-                                }
-                                if (label_sub) {
-                                    label_str += ` - ${label_sub.textContent.trim()}`;
-                                }
-                            }
-                        
-                            return {
-                                value: input ? el.getAttribute('data-option-value') : null,
-                                name: label ? label_str : 'Unknown location'
-                            };
-                        }).filter(loc => loc.value);    // Filter out any null values
-                    });
-    
+
                     thisObj.printMessage(`Found ${locations.length} locations.`);
-    
-                    // Click outside the location dialog to close it
-                    await page.click('div#__nuxt header#header').catch(_ => {
-                        thisObj.printMessage('Failed to close location dialog by clicking header');
-                    });
-    
+
                     // All locations structure declaration
                     const fuelData = [];
-    
-                    // Iterate through each location separately with new browser instances
+
+                    // Iterate through each location
                     for (const location of locations) {
-                        // Create a new browser for each location
-                        // That ensures clean state for each location processing
-                        thisObj.printMessage(`Processing location: ${location.name} (${location.value})`);
-                        
+                        thisObj.printMessage(`Processing location: ${location.name}`);
+
                         try {
-                            // Use a new browser for each location
-                            const browser = await chromium.launch();
-                            const newContext = await browser.newContext();
-                            const newPage = await newContext.newPage();
-                            
-                            try {
-                                // Clear cookies before starting
-                                await newPage.context().clearCookies();
-                                thisObj.printMessage('Cookies cleared before processing location');
-                                
-                                // Navigate to the home page
-                                await newPage.goto(thisObj.getUrl(), { waitUntil: 'networkidle' });
-                                
-                                // Accept cookies if present
-                                const cookieBtn = newPage.locator('button#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
-                                try {
-                                    await cookieBtn.waitFor({ timeout: 10000 });
-                                    thisObj.printMessage('Accepting cookies...');
-                                    await cookieBtn.click();
-                                    await newPage.waitForLoadState('networkidle');
-                                } catch (e) {
-                                    thisObj.printMessage('No cookie dialog visible');
-                                }
-                                
-                                // Click on "Vybrat pobočku" button
-                                thisObj.printMessage('Clicking on "Vybrat pobočku" button...');
-                                const locBtn = newPage.locator('div#__nuxt header#header button.btn-lg');
-                                await locBtn.waitFor({ timeout: 20000 });
-                                
-                                // Use force: true to force click
-                                await locBtn.click({ force: true });
-                                await newPage.waitForLoadState('networkidle');
-                                
-                                // Verify that location selection dialog is visible, using an extended timeout
-                                thisObj.printMessage('Verifying location selection dialog is visible...');
-                                await newPage.locator('#input_9').waitFor({ timeout: 20000 });
+                            // Click on the location link in header (SPA - no navigation)
+                            thisObj.printMessage(`Clicking on location: ${location.name}`);
+                            const locationLink = page.locator('#header div.max-md\\:hidden').getByRole('link', { name: location.name, exact: true });
+                            await locationLink.click();
 
-                                // Wait for locations list to be fully loaded
-                                thisObj.printMessage('Waiting for locations list to be fully loaded...');
-                                await newPage.waitForFunction(() => {
-                                    const list = document.querySelector('#input_9 > ul');
-                                    return list && list.children.length > 0;
-                                }, { timeout: 15000 });
-                                
-                                // Find the specified location item
-                                const locItemSelector = `#input_9 > ul > li[data-option-value="${location.value}"] > label`;
-                                thisObj.printMessage(`Looking for location item: ${locItemSelector}`);
-                                
-                                // Click on the specified location -> use 3 different methods
-                                let locationSelected = false;
-                                
-                                // Method 1: JavaScript click
-                                try {
-                                    thisObj.printMessage('Trying JavaScript click...');
-                                    await newPage.evaluate((selector: string) => {
-                                        const element = document.querySelector(selector);
-                                        if (element instanceof HTMLElement) {
-                                            element.click();
-                                        }
-                                    }, locItemSelector);
-                                    
-                                    // Wait for the data to load
-                                    await newPage.waitForFunction(async () => {
-                                        await new Promise(resolve => setTimeout(resolve, 1500));
-                                    }, { timeout: 10000 });
-                                    
-                                    // Verify the dialog is closed
-                                    const isLocationOpen = await newPage.locator('#teleport-target h2').first()
-                                        .isVisible()
-                                        .catch(() => false);
-                                    
-                                    // Log the state of the location dialog in debug mode
-                                    thisObj.printMessage(`Location dialog is ${isLocationOpen ? 'open' : 'closed'}`, "DEBUG");
-                                    
-                                    if (isLocationOpen) {
-                                        locationSelected = true;
-                                        thisObj.printMessage('Location selected using JavaScript click');
-                                    }
-                                } catch (e) {
-                                    thisObj.printMessage('JavaScript click failed, trying next method');
-                                }
-                                
-                                // Method 2: Force click
-                                if (!locationSelected) {
-                                    try {
-                                        thisObj.printMessage('Trying force click...');
-                                        await newPage.locator(locItemSelector).click({ force: true, timeout: 10000 });
-                                        
-                                        // Wait for the data to load
-                                        await newPage.waitForFunction(async () => {
-                                            await new Promise(resolve => setTimeout(resolve, 1500));
-                                        }, { timeout: 10000 });
-                                        
-                                        // Verify the dialog is closed
-                                        const isLocationOpen = await newPage.locator('#teleport-target h2').first()
-                                            .isVisible()
-                                            .catch(() => false);
-                                    
-                                        // Log the state of the location dialog in debug mode
-                                        thisObj.printMessage(`Location dialog is ${isLocationOpen ? 'open' : 'closed'}`, "DEBUG");
-                                        
-                                        if (isLocationOpen) {
-                                            locationSelected = true;
-                                            thisObj.printMessage('Location selected using JavaScript click');
-                                        ;}
-                                    } catch (e) {
-                                        thisObj.printMessage('Force click failed, trying next method');
-                                    }
-                                }
-                                
-                                // Method 3: Search using text
-                                if (!locationSelected) {
-                                    try {
-                                        thisObj.printMessage('Trying text search...');
-                                        
-                                        const allLocationItems = newPage.locator('#input_9 > ul > li');
-                                        const count = await allLocationItems.count();
-                                        
-                                        for (let i = 0; i < count; i++) {
-                                            const itemText = await allLocationItems.nth(i).locator('label').textContent();
-                                            const locationNameParts = location.name.split('-')
-                                                .map((item: string) => item.trim());
+                            // Wait for content to change (SPA behavior)
+                            thisObj.printMessage('Waiting for content to load...');
+                            await page.waitForLoadState('networkidle');
 
-                                            // Check if the location name contains multiple parts
-                                            let multipart = (locationNameParts.length > 1);
-                                            
-                                            // Check if the item text contains all location parts
-                                            if (itemText && itemText.includes(locationNameParts[0])) {
-                                                if(!multipart || itemText.includes(locationNameParts[1])) {
-                                                    thisObj.printMessage(`Found matching location by text: "${itemText}"`);
-                                                    await allLocationItems.nth(i).locator('label').click({ force: true });
+                            // Wait for the fuel station table to load
+                            thisObj.printMessage('Looking for "Čerpací stanice" table...');
+                            const fuelTable = page.locator('section:has(h2:has-text("Čerpací stanice")) table.w-full');
+                            await fuelTable.waitFor({ timeout: 15000 });
 
-                                                    // Wait for the data to load
-                                                    await newPage.waitForFunction(async () => {
-                                                        await new Promise(resolve => setTimeout(resolve, 1500));
-                                                    }, { timeout: 10000 });
+                            // Extract fuel data from the table
+                            const fuels: FuelData[] = await fuelTable.locator('tbody > tr').evaluateAll((rows: any[]): {
+                                name: string; price: number
+                            }[] => rows.map((row: any): {
+                                name: string; price: number
+                            } => {
+                                const nameEl = row.querySelector('th, td:first-child');
+                                const priceEl = row.querySelector('td:last-child, td.text-right');
 
-                                                    // Verify the dialog is closed
-                                                    const isLocationOpen = await newPage.locator('#teleport-target h2').first()
-                                                        .isVisible()
-                                                        .catch(() => false);
-                                    
-                                                    // Log the state of the location dialog in debug mode
-                                                    thisObj.printMessage(`Location dialog is ${isLocationOpen
-                                                        ? 'open' : 'closed'}`, "DEBUG");
-                                                    
-                                                    if (isLocationOpen) {
-                                                        locationSelected = true;
-                                                        thisObj.printMessage('Location selected using JavaScript click');
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } catch (e) {
-                                        thisObj.printMessage('Text search failed');
-                                    }
-                                }
-                                
-                                if (!locationSelected) {
-                                    throw new Error('All methods to select location failed');
-                                }
-                                
-                                // Wait for the network to settle
-                                await newPage.waitForLoadState('networkidle');
-                                
-                                // Wait for the detail page to load
-                                thisObj.printMessage('Waiting for detail page to load...');
-                                await newPage.locator('#teleport-target div.flex.items-center.gap-x-4')
-                                    .waitFor({ timeout: 15000 });
-                                
-                                // Extract the station name
-                                const stationName = await newPage.locator('#teleport-target span.text-sm.lg\\:text-base')
-                                    .evaluate((el: HTMLElement | SVGElement) => { 
-                                        return el.textContent?.trim() || ''; 
-                                    });
-                                
-                                // Extract the fuel names and prices
-                                const fuels: FuelData[] = await newPage
-                                    .locator('#teleport-target div.lg\\:pl-6 section:nth-child(1) > table.w-full > tbody > tr')
-                                    .evaluateAll((rows: any[]): {name: string; price: number}[] => rows.map((row: any): {
-                                        name: string; price: number
-                                    } => {
-                                        const nameEl = row.querySelector('th.text-left');
-                                        const priceEl = row.querySelector('td.text-right');
-                                    
-                                        return {
-                                            name: nameEl ? nameEl.textContent.trim() : 'Unknown',
-                                            price: priceEl ? parseFloat(priceEl.textContent
-                                                .replace('Kč', '').replace(',', '.').trim()) : NaN
-                                        };
-                                    })
-                                );
-
-                                // Check if there are any fuel data
-                                if (fuels.length === 0) {
-                                    thisObj.printMessage('No fuel data found, skipping.');
-                                    continue;
-                                }
-                                
-                                // Create location fata for this location
-                                const locationData: LocationData = {
-                                    stationName: `Globus ${stationName}`,
-                                    location: location.name,
-                                    fuels: fuels
+                                return {
+                                    name: nameEl ? nameEl.textContent.trim() : 'Unknown',
+                                    price: priceEl ? parseFloat(priceEl.textContent
+                                        .replace('Kč', '').replace(',', '.').trim()) : NaN
                                 };
-                                
-                                // Log data for debugging
-                                thisObj.printMessage(`Station: ${locationData.stationName}`, "DEBUG");
-                                thisObj.printMessage(`Location: ${locationData.location}`, "DEBUG");
-                                thisObj.printMessage('Fuels:', "DEBUG");
-                                fuels.forEach((fuel: { name: string; price: number; }) => {
-                                    thisObj.printMessage(`  - ${fuel.name}: ${fuel.price.toFixed(2)} CZK`, "DEBUG");
-                                });
-                                
-                                // Add location data to collection
-                                fuelData.push(locationData);
-                                
-                            } catch (error) {
-                                thisObj.printMessage(`Error processing location ${location.name}: ${error}`, "ERROR");
-                                await newPage.screenshot({
-                                    path: `screenshots/error-globus-${WebCrawler.convertFileName(location.value)}.png`
-                                });
-                            } finally {
-                                // Always close the browser
-                                await newContext.close();
-                                await browser.close();
+                            }));
+
+                            // Check if there are any fuel data
+                            if (fuels.length === 0) {
+                                thisObj.printMessage('No fuel data found, skipping.');
+                                continue;
                             }
-                        } catch (browserError) {
-                            thisObj.printMessage(`Error creating browser for location ${location.name}: ${browserError}`, "ERROR");
+
+                            // Create location data for this location
+                            const locationData: LocationData = {
+                                stationName: `Globus ${location.name}`,
+                                location: location.name,
+                                fuels: fuels
+                            };
+
+                            // Log data for debugging
+                            thisObj.printMessage(`Station: ${locationData.stationName}`, "DEBUG");
+                            thisObj.printMessage(`Location: ${locationData.location}`, "DEBUG");
+                            thisObj.printMessage('Fuels:', "DEBUG");
+                            fuels.forEach((fuel: { name: string; price: number; }) => {
+                                thisObj.printMessage(`  - ${fuel.name}: ${fuel.price.toFixed(2)} CZK`, "DEBUG");
+                            });
+
+                            // Add location data to collection
+                            fuelData.push(locationData);
+
+                            // SPA: Links in header remain clickable, no navigation needed
+
+                        } catch (error) {
+                            let errorDate = moment().tz("UTC").toDate().toISOString().slice(0, 10);
+                            thisObj.printMessage(`Error processing location ${location.name}: ${error}`, "ERROR");
+
+                            // Take a screenshot of the error
+                            await page.screenshot({
+                                path: `screenshots/${errorDate}/error-globus-${WebCrawler.convertFileName(location.name)}.png`
+                            });
+                            // SPA: Continue to next location - links in header remain clickable
                         }
                     }
     
