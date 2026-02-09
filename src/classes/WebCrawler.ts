@@ -73,7 +73,8 @@ abstract class WebCrawler {
     private static readonly OSM_TYPE_PRIORITIES: OSMTypePriority[] = [
         { class: 'amenity', type: 'fuel', priority: 1 },      // Fuel station - highest priority
         { class: 'amenity', type: 'car_wash', priority: 2 },  // Car wash - fallback 1
-        { class: 'shop', type: 'yes', priority: 3 }           // Shop - fallback 2
+        { class: 'shop', type: 'yes', priority: 3 },          // Shop - fallback 2
+        { class: 'shop', type: 'kiosk', priority: 4 }         // Kiosk - fallback 3
     ];
 
     /**
