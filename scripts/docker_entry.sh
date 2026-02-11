@@ -21,7 +21,8 @@
 set -e
 
 # Export all environment variables to /etc/cron.env
-printenv | grep -E '^(DB_HOSTNAME|DB_PORT|DB_USERNAME|DB_PASSWORD|DB_DATABASE)=' > /etc/cron.env
+# Include DISPLAY so that Playwright can use the virtual X server from xvfb-run
+printenv | grep -E '^(DB_HOSTNAME|DB_PORT|DB_USERNAME|DB_PASSWORD|DB_DATABASE|DISPLAY)=' > /etc/cron.env
 
 # Make sure we start in working directory
 cd /app
@@ -29,6 +30,9 @@ cd /app
 # Start populating the database
 /app/scripts/populate.sh notice 2>&1 | tee /var/log/populate.log
 
-# Start the cron service and follow new log entries
-cron
-tail -f -n 0 /var/log/cron.log
+# Start tailing cron log in background
+tail -f -n 0 /var/log/cron.log &
+
+# Start the cron service in foreground
+# If cron dies, the container exits and docker restarts it (restart: unless-stopped)
+cron -f

@@ -67,3 +67,6 @@ if (debugMode) {
 
 // Log end
 console.log(`[${moment().tz(timezone).format("YYYY-MM-DD HH:mm:ss zz")}] [Process] Finished.`);
+
+// Exit the process explicitly to ensure all resources are released
+process.exit(0);
