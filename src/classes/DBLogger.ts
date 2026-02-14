@@ -69,6 +69,39 @@ class DBLogger {
         connection.end();
     }
 
+    public async getCachedCoordinates(stationName: string, locationName: string): Promise<{lat: number, lon: number} | null> {
+        let connection = mysql.createConnection({
+            host: this.settings.hostname,
+            port: this.settings.port,
+            user: this.settings.username,
+            password: this.settings.password,
+            database: this.settings.database
+        }).promise();
+
+        try {
+            const [rows] = await connection.query<RowDataPacket[]>(
+                `SELECT station_loc_lat, station_loc_lon FROM petrolscan_data
+                WHERE station_name = ?
+                AND station_loc_name = ?
+                AND station_loc_lat != 0
+                AND station_loc_lon != 0
+                LIMIT 1;`,
+                [stationName, locationName]
+            );
+
+            if (rows.length > 0) {
+                return { lat: rows[0].station_loc_lat, lon: rows[0].station_loc_lon };
+            }
+            return null;
+        } catch (error) {
+            console.error(`[${moment().tz(moment.tz.guess())
+                .format("YYYY-MM-DD HH:mm:ss zz")}] [Database Logger] Error fetching cached coordinates: ${error}`);
+            return null;
+        } finally {
+            await connection.end();
+        }
+    }
+
     public async checkUpdates(data: DBData): Promise<boolean> {
         // Update check flag
         let updated = false;
@@ -94,14 +127,12 @@ class DBLogger {
             [rows, _fields] = await connection.query<RowDataPacket[]>(
                 `SELECT * FROM petrolscan_data
                 WHERE station_name = ?
-                AND station_loc_lat = ?
-                AND station_loc_lon = ?
+                AND station_loc_name = ?
                 AND fuel_type = ?
                 AND fuel_quality ${data.FuelQuality ? "= ?" : "IS NULL"};`,
                 [
                     data.StationName,
-                    data.StationLocation.lat,
-                    data.StationLocation.lon,
+                    data.StationLocation.name,
                     data.FuelType,
                     data.FuelQuality
                 ]
@@ -188,14 +219,12 @@ class DBLogger {
             let [rows, _fields] = await connection.query<RowDataPacket[]>(
                 `SELECT * FROM petrolscan_data
                 WHERE station_name = ?
-                AND station_loc_lat = ?
-                AND station_loc_lon = ?
+                AND station_loc_name = ?
                 AND fuel_type = ?
                 AND fuel_quality ${data.FuelQuality ? "= ?" : "IS NULL"};`,
                 [
                     data.StationName,
-                    data.StationLocation.lat,
-                    data.StationLocation.lon,
+                    data.StationLocation.name,
                     data.FuelType,
                     data.FuelQuality
                 ]
@@ -206,22 +235,22 @@ class DBLogger {
                 // Update data
                 await connection.query(
                     `UPDATE petrolscan_data
-                    SET station_loc_name = ?,
+                    SET station_loc_lat = ?,
+                    station_loc_lon = ?,
                     fuel_name = ?, fuel_price = ?
                     WHERE station_name = ?
-                    AND station_loc_lat = ?
-                    AND station_loc_lon = ?
+                    AND station_loc_name = ?
                     AND fuel_type = ?
                     AND fuel_quality = ?;`,
                     [
                         // Set
-                        data.StationLocation.name,
+                        data.StationLocation.lat,
+                        data.StationLocation.lon,
                         data.FuelName,
                         data.FuelPrice,
                         // Where
                         data.StationName,
-                        data.StationLocation.lat,
-                        data.StationLocation.lon,
+                        data.StationLocation.name,
                         data.FuelType,
                         data.FuelQuality
                     ]

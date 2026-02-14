@@ -127,6 +127,18 @@ class GlobusCrawler extends WebCrawler {
                             thisObj.printMessage('Waiting for content to load...');
                             await page.waitForLoadState('networkidle');
 
+                            // Check if rate-limited by Globus anti-bot protection
+                            const blocked = page.locator('text=Přístup je dočasně blokován');
+                            if (await blocked.isVisible({ timeout: 1000 }).catch(() => false)) {
+                                thisObj.printMessage(`Rate limited at ${location.name}, waiting 60s before retry...`, "ERROR");
+                                await new Promise(resolve => setTimeout(resolve, 60000));
+                                await page.goto(thisObj.getUrl(), { waitUntil: 'networkidle' });
+                                // Re-click the location after recovery
+                                const retryLink = page.locator('#header div.max-md\\:hidden').getByRole('link', { name: location.name, exact: true });
+                                await retryLink.click();
+                                await page.waitForLoadState('networkidle');
+                            }
+
                             // Wait for the fuel station table to load
                             thisObj.printMessage('Looking for "Čerpací stanice" table...');
                             const fuelTable = page.locator('section:has(h2:has-text("Čerpací stanice")) table.w-full');
@@ -172,7 +184,8 @@ class GlobusCrawler extends WebCrawler {
                             // Add location data to collection
                             fuelData.push(locationData);
 
-                            // SPA: Links in header remain clickable, no navigation needed
+                            // Delay between locations to avoid rate limiting
+                            await new Promise(resolve => setTimeout(resolve, 3000));
 
                         } catch (error) {
                             let errorDate = moment().tz("UTC").toDate().toISOString().slice(0, 10);
@@ -183,6 +196,7 @@ class GlobusCrawler extends WebCrawler {
                                 path: `screenshots/${errorDate}/error-globus-${WebCrawler.convertFileName(location.name)}.png`
                             });
                             // SPA: Continue to next location - links in header remain clickable
+                            await new Promise(resolve => setTimeout(resolve, 3000));
                         }
                     }
     

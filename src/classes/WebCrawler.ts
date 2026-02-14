@@ -234,71 +234,96 @@ abstract class WebCrawler {
             // Data source: https://openstreetmap.org/
             // Data license: Open Database License (ODbL) https://opendatacommons.org/licenses/odbl/
 
-            // Generate search term based on station type
-            const searchConfig = WebCrawler.generateSearchTerm(station, data.location);
-
-            // Fetch OSM data
-            let osmData: OSMSearchResult[];
-            try {
-                // Encode each part of the search term separately (preserving + as separator)
-                const encodedSearchTerm = searchConfig.searchTerm
-                    .split('+')
-                    .map(part => encodeURIComponent(part))
-                    .join('+');
-
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?q=${encodedSearchTerm}&format=json`
-                );
-                osmData = await response.json();
-
-                // Respect Nominatim rate limit (max 1 request per second)
-                await new Promise(resolve => setTimeout(resolve, 1100));
-            } catch (error) {
-                this.printMessage(`Failed to fetch OSM data for ${data.location}: ${error}`, "ERROR");
-                osmData = [];
-            }
-
             // Declare coordinates with NaN defaults
             let osmLat = NaN, osmLon = NaN;
 
-            // Check if OSM data is valid
-            if (!Array.isArray(osmData)) {
-                this.printMessage(
-                    `Returned data for ${data.location} is not an array. Using Null Island coordinates.`,
-                    "ERROR"
-                );
-                osmLat = 0;
-                osmLon = 0;
-            } else if (osmData.length === 0) {
-                this.printMessage(
-                    `No OSM results for ${data.location} (search: ${searchConfig.searchTerm}). Using Null Island coordinates.`,
-                    "ERROR"
-                );
-                osmLat = 0;
-                osmLon = 0;
+            // Try to use cached coordinates from DB first
+            const cached = await this.getLogger().getCachedCoordinates(this.getName(), data.location);
+            if (cached) {
+                osmLat = cached.lat;
+                osmLon = cached.lon;
+                this.printMessage(`Using cached coordinates for ${data.location}: ${osmLat}, ${osmLon}`, "DEBUG");
             } else {
-                // Select best location based on priority (fuel > car_wash > shop)
-                const bestLocation = WebCrawler.selectBestOSMLocation(
-                    osmData,
-                    searchConfig.nameFilter,
-                    searchConfig.displayNameFilter
-                );
+                // Generate search term based on station type
+                const searchConfig = WebCrawler.generateSearchTerm(station, data.location);
 
-                if (bestLocation) {
-                    osmLat = Number.parseFloat(bestLocation.lat);
-                    osmLon = Number.parseFloat(bestLocation.lon);
+                // Fetch OSM data with retry logic
+                let osmData: OSMSearchResult[] = [];
+                const maxRetries = 3;
 
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        // Encode each part of the search term separately (preserving + as separator)
+                        const encodedSearchTerm = searchConfig.searchTerm
+                            .split('+')
+                            .map(part => encodeURIComponent(part))
+                            .join('+');
+
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/search?q=${encodedSearchTerm}&format=json`,
+                            { headers: { 'User-Agent': 'PetrolScan/1.0 (bachelor-thesis; petrol-price-comparison)' } }
+                        );
+
+                        // Check HTTP status before parsing JSON
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+
+                        osmData = await response.json();
+                        break; // Success, exit retry loop
+                    } catch (error) {
+                        this.printMessage(
+                            `Failed to fetch OSM data for ${data.location} (attempt ${attempt}/${maxRetries}): ${error}`,
+                            "ERROR"
+                        );
+                        if (attempt < maxRetries) {
+                            await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+                        }
+                    }
+                }
+
+                // Respect Nominatim rate limit (max 1 request per second)
+                await new Promise(resolve => setTimeout(resolve, 1100));
+
+                // Check if OSM data is valid
+                if (!Array.isArray(osmData)) {
                     this.printMessage(
-                        `Found ${bestLocation.class}/${bestLocation.type} for ${data.location}`,
-                        "DEBUG"
-                    );
-                } else {
-                    this.printMessage(
-                        `No matching location type found for ${data.location}. Using Null Island coordinates.`,
+                        `Returned data for ${data.location} is not an array. Using Null Island coordinates.`,
                         "ERROR"
                     );
                     osmLat = 0;
                     osmLon = 0;
+                } else if (osmData.length === 0) {
+                    this.printMessage(
+                        `No OSM results for ${data.location} (search: ${searchConfig.searchTerm}). Using Null Island coordinates.`,
+                        "ERROR"
+                    );
+                    osmLat = 0;
+                    osmLon = 0;
+                } else {
+                    // Select best location based on priority (fuel > car_wash > shop)
+                    const bestLocation = WebCrawler.selectBestOSMLocation(
+                        osmData,
+                        searchConfig.nameFilter,
+                        searchConfig.displayNameFilter
+                    );
+
+                    if (bestLocation) {
+                        osmLat = Number.parseFloat(bestLocation.lat);
+                        osmLon = Number.parseFloat(bestLocation.lon);
+
+                        this.printMessage(
+                            `Found ${bestLocation.class}/${bestLocation.type} for ${data.location}`,
+                            "DEBUG"
+                        );
+                    } else {
+                        this.printMessage(
+                            `No matching location type found for ${data.location}. Using Null Island coordinates.`,
+                            "ERROR"
+                        );
+                        osmLat = 0;
+                        osmLon = 0;
+                    }
                 }
             }
 
