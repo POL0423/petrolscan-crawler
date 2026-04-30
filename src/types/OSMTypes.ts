@@ -19,6 +19,7 @@ type OSMSearchResult = {
     class: string;
     name?: string;
     display_name?: string;
+    importance?: number;        // Used to rank fallback results when no priority type matches
     [key: string]: any;         // Allow additional properties
 };
 

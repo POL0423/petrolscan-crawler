@@ -77,6 +77,16 @@ abstract class WebCrawler {
         { class: 'shop', type: 'kiosk', priority: 4 }         // Kiosk - fallback 3
     ];
 
+    // Czech Republic bounding box used when no priority-typed OSM result is found.
+    // Keeps the geocoder from latching onto a same-named place abroad
+    // (e.g. a "Globus" hypermarket in Germany) when the local mapping is missing.
+    private static readonly CZ_BBOX = {
+        minLat: 48.5,
+        maxLat: 51.1,
+        minLon: 12.0,
+        maxLon: 19.0
+    };
+
     /**
      * Gets priority for a given class/type combination
      */
@@ -88,6 +98,50 @@ abstract class WebCrawler {
     }
 
     /**
+     * Returns true if the given coordinates fall inside the Czech Republic bounding box.
+     */
+    private static isInCzechRepublic(lat: number, lon: number): boolean {
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+        const { minLat, maxLat, minLon, maxLon } = WebCrawler.CZ_BBOX;
+        return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
+    }
+
+    /**
+     * Applies displayName/name disambiguation filters to OSM results.
+     * Both filters are case-insensitive substring matches. If a filter would
+     * eliminate every result, it is dropped (preserving the previous set).
+     */
+    private static filterOSMResults(
+        osmResults: OSMSearchResult[],
+        nameFilter?: string,
+        displayNameFilter?: string
+    ): OSMSearchResult[] {
+        let filteredResults = osmResults;
+
+        if (displayNameFilter) {
+            const normalizedFilter = displayNameFilter.toLowerCase();
+            const displayFiltered = filteredResults.filter(result =>
+                result.display_name?.toLowerCase().includes(normalizedFilter)
+            );
+            if (displayFiltered.length > 0) {
+                filteredResults = displayFiltered;
+            }
+        }
+
+        if (nameFilter) {
+            const normalizedFilter = nameFilter.toLowerCase();
+            const nameFiltered = filteredResults.filter(result =>
+                result.name?.toLowerCase().includes(normalizedFilter)
+            );
+            if (nameFiltered.length > 0) {
+                filteredResults = nameFiltered;
+            }
+        }
+
+        return filteredResults;
+    }
+
+    /**
      * Selects the best location from OSM results based on type priority
      */
     private static selectBestOSMLocation(
@@ -95,33 +149,7 @@ abstract class WebCrawler {
         nameFilter?: string,
         displayNameFilter?: string
     ): OSMSearchResult | null {
-        let filteredResults = osmResults;
-
-        // Apply display_name filter first if provided (e.g., for Cheb -> Odrava)
-        if (displayNameFilter) {
-            const normalizedFilter = displayNameFilter.toLowerCase();
-            filteredResults = osmResults.filter(result =>
-                result.display_name?.toLowerCase().includes(normalizedFilter)
-            );
-
-            // If display_name filter found nothing, use all results
-            if (filteredResults.length === 0) {
-                filteredResults = osmResults;
-            }
-        }
-
-        // Apply name filter if provided (for disambiguation like Dolní Dvořiště I/II)
-        if (nameFilter) {
-            const normalizedFilter = nameFilter.toLowerCase();
-            const nameFiltered = filteredResults.filter(result =>
-                result.name?.toLowerCase().includes(normalizedFilter)
-            );
-
-            // If name filter found something, use it; otherwise keep previous results
-            if (nameFiltered.length > 0) {
-                filteredResults = nameFiltered;
-            }
-        }
+        const filteredResults = WebCrawler.filterOSMResults(osmResults, nameFilter, displayNameFilter);
 
         // Find result with highest priority (lowest number)
         let bestResult: OSMSearchResult | null = null;
@@ -132,6 +160,41 @@ abstract class WebCrawler {
 
             if (priority !== null && priority < bestPriority) {
                 bestPriority = priority;
+                bestResult = result;
+            }
+        }
+
+        return bestResult;
+    }
+
+    /**
+     * Fallback when no priority-typed OSM result is found: pick the most
+     * "important" result whose coordinates lie within the Czech Republic
+     * bounding box. Prevents Null Island writes when a station exists but
+     * OSM lacks an `amenity=fuel` (or any whitelisted) tag for it.
+     */
+    private static selectFallbackOSMLocation(
+        osmResults: OSMSearchResult[],
+        nameFilter?: string,
+        displayNameFilter?: string
+    ): OSMSearchResult | null {
+        const filteredResults = WebCrawler.filterOSMResults(osmResults, nameFilter, displayNameFilter);
+
+        let bestResult: OSMSearchResult | null = null;
+        let bestImportance = -Infinity;
+
+        for (const result of filteredResults) {
+            const lat = Number.parseFloat(result.lat);
+            const lon = Number.parseFloat(result.lon);
+
+            if (!WebCrawler.isInCzechRepublic(lat, lon)) continue;
+
+            // Nominatim sometimes omits importance; treat missing as 0 so any
+            // in-bbox result still beats no result at all.
+            const importance = typeof result.importance === 'number' ? result.importance : 0;
+
+            if (importance > bestImportance) {
+                bestImportance = importance;
                 bestResult = result;
             }
         }
@@ -317,12 +380,32 @@ abstract class WebCrawler {
                             "DEBUG"
                         );
                     } else {
-                        this.printMessage(
-                            `No matching location type found for ${data.location}. Using Null Island coordinates.`,
-                            "ERROR"
+                        // No priority-typed match - try the Czech-bbox fallback before giving up
+                        const fallbackLocation = WebCrawler.selectFallbackOSMLocation(
+                            osmData,
+                            searchConfig.nameFilter,
+                            searchConfig.displayNameFilter
                         );
-                        osmLat = 0;
-                        osmLon = 0;
+
+                        if (fallbackLocation) {
+                            osmLat = Number.parseFloat(fallbackLocation.lat);
+                            osmLon = Number.parseFloat(fallbackLocation.lon);
+
+                            this.printMessage(
+                                `No priority-typed OSM match for ${data.location}; ` +
+                                `using fallback ${fallbackLocation.class}/${fallbackLocation.type} ` +
+                                `at ${osmLat}, ${osmLon}`,
+                                "WARN"
+                            );
+                        } else {
+                            this.printMessage(
+                                `No matching location type found for ${data.location} ` +
+                                `(no in-bbox fallback either). Using Null Island coordinates.`,
+                                "ERROR"
+                            );
+                            osmLat = 0;
+                            osmLon = 0;
+                        }
                     }
                 }
             }
